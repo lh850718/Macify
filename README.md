@@ -81,15 +81,19 @@ To conserve storage, it's advised against downloading the entire video collectio
     ```bash
     /path/to/your/videoserver.conf
     ```
+3. Edit the `videoserver.conf` file, change all `YOUR_MAC_USER_NAME` to your own Mac user name.
 
-3. Launch the terminal application.
-4. Link the configuration file to the Apache configuration folder:
+    ```bash
+    /Users/YOUR_MAC_USER_NAME/Library/Application Support/com.apple.wallpaper/aerials/videos
+    ```
+4. Launch the terminal application.
+5. Link the configuration file to the Apache configuration folder:
 
     ```bash
     sudo ln -s /path/to/your/videoserver.conf /private/etc/apache2/other
     ```
 
-5. To activate the changes, restart Apache:
+6. To activate the changes, restart Apache:
 
     ```bash
     sudo apachectl restart

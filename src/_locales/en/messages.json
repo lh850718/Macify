@@ -105,5 +105,8 @@
   "video_local_step3": { "message": "Symlink the config into Apache's drop-in folder:" },
   "video_local_step4": { "message": "Restart Apache:" },
   "video_local_step5_pre": { "message": "The default URL above (" },
-  "video_local_step5_post": { "message": ") should now serve your downloaded videos." }
+  "video_local_step5_post": { "message": ") should now serve your downloaded videos." },
+
+  "about_created_by": { "message": "Created by Jason Ng, Dofy, Setilis" },
+  "about_github_link": { "message": "Source on GitHub" }
 }

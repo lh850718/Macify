@@ -8,6 +8,7 @@
   } from '../lib/i18n.svelte.js';
   import { geocodeCity } from '../lib/weather.js';
   import VideoSetupHelp from './VideoSetupHelp.svelte';
+  import IconGithub from '~icons/mingcute/github-line';
 
   const version = chrome.runtime.getManifest().version;
 
@@ -303,6 +304,21 @@
         </select>
       </label>
     </section>
+
+    <footer
+      class="mt-8 flex flex-col items-center gap-2 text-xs text-slate-500"
+    >
+      <p>{t('about_created_by')}</p>
+      <a
+        href="https://github.com/jason5ng32/macOS-Screen-Saver-as-Chrome-New-Tab"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1.5 text-slate-500 transition hover:text-slate-800"
+      >
+        <IconGithub class="h-4 w-4" />
+        <span>{t('about_github_link')}</span>
+      </a>
+    </footer>
 
     <details class="mt-8 rounded-xl bg-slate-900 p-5 text-slate-200">
       <summary

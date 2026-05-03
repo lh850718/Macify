@@ -18,5 +18,20 @@
   "options_show_time": { "message": "在新标签页显示时钟" },
   "options_hour_system": { "message": "时制" },
   "options_hour_12": { "message": "12 小时制" },
-  "options_hour_24": { "message": "24 小时制" }
+  "options_hour_24": { "message": "24 小时制" },
+
+  "options_video_section": { "message": "视频" },
+  "options_video_source": { "message": "视频源" },
+  "options_video_source_apple": { "message": "苹果服务器" },
+  "options_video_source_local": { "message": "本地服务器" },
+  "options_video_reverse_proxy": { "message": "使用反向代理 (Cloudflare Worker)" },
+  "options_video_reverse_proxy_note": { "message": "如果系统不信任 sylvan.apple.com 的证书，反向代理会替你拉取视频。Worker 不可达时会自动回退到直连。" },
+  "options_video_local_url": { "message": "本地服务器地址" },
+  "options_video_local_note": { "message": "在本机跑一个 Apache 服务器，托管苹果航拍屏保的 .mov / .mp4 文件。配置参考 README。" },
+  "options_video_show_refresh": { "message": "在新标签页显示切换按钮" },
+
+  "refresh_video": { "message": "切换视频" },
+  "error_video_apple": { "message": "无法从苹果服务器加载视频。可在设置里打开反向代理，或手动信任 sylvan.apple.com 的证书。" },
+  "error_video_local": { "message": "无法连接本地视频服务器，请在设置中检查地址。" },
+  "error_video_local_empty": { "message": "本地服务器可达，但没找到 .mov / .mp4 文件。" }
 }

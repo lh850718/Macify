@@ -26,6 +26,22 @@
   function onHourSystemChange(event) {
     updateSetting('hourSystem', event.currentTarget.value);
   }
+
+  function onVideoSrcChange(event) {
+    updateSetting('videoSrc', event.currentTarget.value);
+  }
+
+  function onReverseProxyChange(event) {
+    updateSetting('reverseProxy', event.currentTarget.checked);
+  }
+
+  function onVideoSourceUrlChange(event) {
+    updateSetting('videoSourceUrl', event.currentTarget.value);
+  }
+
+  function onRefreshButtonChange(event) {
+    updateSetting('refreshButton', event.currentTarget.checked);
+  }
 </script>
 
 <main>
@@ -41,6 +57,49 @@
           <option value={code}>{t(`options_language_${code}`)}</option>
         {/each}
       </select>
+    </label>
+  </section>
+
+  <section>
+    <h2>{t('options_video_section')}</h2>
+    <label class="row">
+      <span>{t('options_video_source')}:</span>
+      <select value={settings.videoSrc} onchange={onVideoSrcChange}>
+        <option value="apple">{t('options_video_source_apple')}</option>
+        <option value="local">{t('options_video_source_local')}</option>
+      </select>
+    </label>
+
+    {#if settings.videoSrc === 'apple'}
+      <label class="row">
+        <input
+          type="checkbox"
+          checked={settings.reverseProxy}
+          onchange={onReverseProxyChange}
+        />
+        <span>{t('options_video_reverse_proxy')}</span>
+      </label>
+      <p class="note">{t('options_video_reverse_proxy_note')}</p>
+    {:else}
+      <label class="row">
+        <span>{t('options_video_local_url')}:</span>
+        <input
+          type="text"
+          class="text-input"
+          value={settings.videoSourceUrl}
+          onchange={onVideoSourceUrlChange}
+        />
+      </label>
+      <p class="note">{t('options_video_local_note')}</p>
+    {/if}
+
+    <label class="row">
+      <input
+        type="checkbox"
+        checked={settings.refreshButton}
+        onchange={onRefreshButtonChange}
+      />
+      <span>{t('options_video_show_refresh')}</span>
     </label>
   </section>
 
@@ -114,6 +173,18 @@
   }
   select {
     padding: 0.3rem 0.5rem;
+  }
+  .text-input {
+    flex: 1;
+    padding: 0.3rem 0.5rem;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 0.85rem;
+  }
+  .note {
+    margin: 0.6rem 0 0;
+    color: #777;
+    font-size: 0.8rem;
+    line-height: 1.4;
   }
   .placeholder {
     border-style: dashed;

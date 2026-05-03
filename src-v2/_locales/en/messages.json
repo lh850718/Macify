@@ -18,5 +18,20 @@
   "options_show_time": { "message": "Show clock on new tab" },
   "options_hour_system": { "message": "Hour system" },
   "options_hour_12": { "message": "12-hour" },
-  "options_hour_24": { "message": "24-hour" }
+  "options_hour_24": { "message": "24-hour" },
+
+  "options_video_section": { "message": "Video" },
+  "options_video_source": { "message": "Source" },
+  "options_video_source_apple": { "message": "Apple server" },
+  "options_video_source_local": { "message": "Local server" },
+  "options_video_reverse_proxy": { "message": "Use reverse proxy (Cloudflare Worker)" },
+  "options_video_reverse_proxy_note": { "message": "If sylvan.apple.com isn't trusted by your system, the reverse proxy fetches videos for you. It auto-falls back to direct if the worker is unreachable." },
+  "options_video_local_url": { "message": "Local server URL" },
+  "options_video_local_note": { "message": "Run an Apache server on localhost serving Apple aerial .mov / .mp4 files. See the README for setup." },
+  "options_video_show_refresh": { "message": "Show refresh button on new tab" },
+
+  "refresh_video": { "message": "Switch video" },
+  "error_video_apple": { "message": "Couldn't load videos from Apple's server. Try enabling the reverse proxy in settings, or trust sylvan.apple.com's certificate manually." },
+  "error_video_local": { "message": "Couldn't reach the local video server. Check the URL in settings." },
+  "error_video_local_empty": { "message": "Local server reachable but no .mov / .mp4 files found." }
 }

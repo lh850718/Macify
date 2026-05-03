@@ -3,6 +3,7 @@
   import { loadLanguage, resolveLanguage } from '../lib/i18n.svelte.js';
   import Clock from '../components/Clock.svelte';
   import VideoBackground from '../components/VideoBackground.svelte';
+  import Weather from '../components/Weather.svelte';
 
   $effect(() => {
     loadLanguage(resolveLanguage(settings.userLanguage));
@@ -10,6 +11,7 @@
 </script>
 
 <VideoBackground />
+<Weather />
 
 <main>
   <div class="centered">

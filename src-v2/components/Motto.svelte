@@ -6,20 +6,16 @@
   let quote = $state(null);
   let visible = $state(true);
 
-  async function loadInitial() {
-    quote = await nextQuote();
-  }
-
   async function refresh() {
     visible = false;
     await new Promise((r) => setTimeout(r, 300));
-    quote = await nextQuote(quote?.content);
+    quote = nextQuote(quote?.content);
     visible = true;
   }
 
   $effect(() => {
     if (settings.showMotto && !quote) {
-      loadInitial();
+      quote = nextQuote();
     }
   });
 </script>
@@ -37,7 +33,7 @@
         refresh();
       }
     }}
-    class="mt-10 mx-auto max-w-2xl px-6 text-center text-white
+    class="mx-auto max-w-2xl px-6 text-center text-white
            cursor-pointer select-none
            [text-shadow:0_2px_8px_rgba(0,0,0,0.55)]
            transition-opacity duration-300 ease-in-out"

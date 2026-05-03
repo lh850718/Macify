@@ -1,39 +1,43 @@
-# src-v2 — Macify v2.0 source
-
-Refactor target. Old code at `../src/` is kept for reference until Phase 03.
+# src — Macify v2 source
 
 ## Stack
 
-- Vite + Svelte 5 (Runes mode) + JS
+- Vite + Svelte 5 (Runes mode) + JS (no TypeScript)
+- Tailwind 4 (`@tailwindcss/vite`)
 - `@crxjs/vite-plugin` for MV3 manifest + HMR
+- `unplugin-icons` + `@iconify/json` for any icon set on demand
 
 ## Layout
 
 ```
-src-v2/
+src/
 ├── manifest.config.js   # generates manifest.json at build
-├── background.js        # service worker
-├── popup/               # newtab page (chrome_url_overrides.newtab)
+├── background.js        # MV3 service worker
+├── popup/               # new tab page (chrome_url_overrides.newtab)
 │   ├── index.html
 │   ├── main.js
 │   └── App.svelte
-├── options/             # popup + options_page
+├── options/             # popup + options_page (same surface)
 │   ├── index.html
 │   ├── main.js
 │   └── App.svelte
 ├── lib/                 # plain-JS modules (storage, weather, video-source, ...)
 ├── components/          # Svelte components
-└── res/                 # static assets bundled into the extension
+├── styles/              # Tailwind entry
+├── data/                # bundled JSON (videos, quotes)
+├── _locales/            # en + zh_CN
+└── res/                 # icon (bundled into extension)
 ```
 
-## Scripts
+## Scripts (run from repo root)
 
-- `npm run dev` — Vite dev server with HMR. Load the running `dist/` as an unpacked extension; the page in the popup will hot-update.
+- `npm run dev` — Vite dev server with HMR. Load `dist/` as unpacked extension.
 - `npm run build` — production build to `dist/`.
-- `npm run zip` — runs after build, packages `dist/` into `releases/macify-vX.Y.Z.zip` for Chrome Web Store upload.
+- `npm run zip` — packages `dist/` into `releases/macify-vX.Y.Z.zip` for Chrome Web Store upload.
+- `npm run build:quotes` — re-fetch + regenerate `data/quotes.json` from upstream.
 
 ## Loading in Chrome
 
 1. `npm run build`
-2. Open `chrome://extensions`, enable Developer mode, click "Load unpacked"
+2. `chrome://extensions` → Developer mode on → Load unpacked
 3. Select the `dist/` directory

@@ -1,5 +1,5 @@
 /**
- * Rebuild src-v2/data/quotes.json from JamesFT/Database-Quotes-JSON.
+ * Rebuild src/data/quotes.json from JamesFT/Database-Quotes-JSON.
  *
  * Source: https://raw.githubusercontent.com/JamesFT/Database-Quotes-JSON/master/quotes.json
  * (~5400 famous quotes, no explicit license but content is largely
@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const SOURCE_URL =
   'https://raw.githubusercontent.com/JamesFT/Database-Quotes-JSON/master/quotes.json';
-const OUT_PATH = path.join(repoRoot, 'src-v2/data/quotes.json');
+const OUT_PATH = path.join(repoRoot, 'src/data/quotes.json');
 
 const TARGET = 500;
 const MAX_PER_AUTHOR = 15;

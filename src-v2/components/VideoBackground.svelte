@@ -1,4 +1,5 @@
 <script>
+  import IconRefresh from '~icons/mingcute/refresh-1-line';
   import { settings } from '../lib/settings.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import {
@@ -63,6 +64,15 @@
     }, 650);
   }
 
+  // Bumped on every refresh-button click; used as a {#key} so the
+  // icon re-mounts and its CSS animation restarts each press.
+  let refreshSpinTick = $state(0);
+
+  function onRefreshClick() {
+    refreshSpinTick++;
+    nextVideo();
+  }
+
   function onCanPlay() {
     opacity = 1;
     consecutiveErrors = 0;
@@ -117,11 +127,20 @@
 
 {#if settings.refreshButton}
   <button
-    class="refresh"
-    onclick={() => nextVideo()}
+    type="button"
+    class="cursor-pointer fixed bottom-6 right-6 z-40 flex h-9.5 w-9.5 items-center justify-center rounded-full bg-white/15 text-white shadow-md backdrop-blur-md transition hover:bg-white/25"
+    onclick={onRefreshClick}
     title={t('refresh_video')}
     aria-label={t('refresh_video')}
-  >↻</button>
+  >
+    {#key refreshSpinTick}
+      <IconRefresh
+        class={refreshSpinTick > 0
+          ? 'h-4.5 w-4.5 animate-[spin_0.5s_ease-in-out]'
+          : 'h-4.5 w-4.5'}
+      />
+    {/key}
+  </button>
 {/if}
 
 <style>
@@ -149,30 +168,5 @@
     z-index: 100;
     backdrop-filter: blur(8px);
     text-align: center;
-  }
-  .refresh {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    width: 38px;
-    height: 38px;
-    border: none;
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 1.3rem;
-    line-height: 1;
-    backdrop-filter: blur(10px);
-    transition:
-      transform 0.4s ease,
-      background 0.2s;
-    z-index: 50;
-  }
-  .refresh:hover {
-    background: rgba(255, 255, 255, 0.28);
-  }
-  .refresh:active {
-    transform: rotate(180deg);
   }
 </style>

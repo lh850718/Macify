@@ -76,5 +76,9 @@
   "options_topsites_section": { "message": "Top Sites" },
   "options_show_topsites": { "message": "Show top sites on new tab" },
   "topsites_label": { "message": "Top Sites" },
-  "topsites_empty": { "message": "No top sites yet — visit some pages first." }
+  "topsites_empty": { "message": "No top sites yet — visit some pages first." },
+
+  "options_zen_section": { "message": "Zen Mode" },
+  "options_show_zen": { "message": "Show Zen mode button on new tab" },
+  "zen_label": { "message": "Zen Mode (fullscreen + ambient music)" }
 }

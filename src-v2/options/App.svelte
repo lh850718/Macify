@@ -75,7 +75,7 @@
       <img
         src="../res/icon.png"
         alt=""
-        class="h-12 w-12 rounded-xl shadow-sm ring-1 ring-slate-200"
+        class="h-12 w-12 rounded-md shadow-sm ring-1 ring-slate-200"
       />
       <div>
         <h1 class="text-2xl font-semibold text-slate-900">
@@ -331,6 +331,28 @@
           />
         </label>
       </div>
+    </section>
+
+    <!-- Zen Mode -->
+    <section
+      class="mb-5 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+    >
+      <h2
+        class="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900"
+      >
+        <span aria-hidden="true">🧘</span>
+        {t('options_zen_section')}
+      </h2>
+
+      <label class="flex items-center justify-between gap-4">
+        <span class="text-sm text-slate-700">{t('options_show_zen')}</span>
+        <input
+          type="checkbox"
+          class="h-4 w-4 cursor-pointer accent-blue-600"
+          checked={settings.showZenMode}
+          onchange={set('showZenMode')}
+        />
+      </label>
     </section>
 
     <!-- Language -->

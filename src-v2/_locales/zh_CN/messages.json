@@ -76,5 +76,9 @@
   "options_topsites_section": { "message": "常用站点" },
   "options_show_topsites": { "message": "在新标签页显示常用站点" },
   "topsites_label": { "message": "常用站点" },
-  "topsites_empty": { "message": "暂无常用站点 —— 先去访问一些网页吧。" }
+  "topsites_empty": { "message": "暂无常用站点 —— 先去访问一些网页吧。" },
+
+  "options_zen_section": { "message": "禅意模式" },
+  "options_show_zen": { "message": "在新标签页显示禅意模式按钮" },
+  "zen_label": { "message": "禅意模式（全屏 + 背景音乐）" }
 }

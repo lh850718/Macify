@@ -1,5 +1,6 @@
 <script>
   import { fly } from 'svelte/transition';
+  import IconGrid from '~icons/mingcute/grid-line';
   import { settings } from '../lib/settings.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import { getTopSites, faviconUrlFor } from '../lib/topsites.js';
@@ -70,19 +71,7 @@
       title={t('topsites_label')}
       aria-label={t('topsites_label')}
     >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linejoin="round"
-        class="h-4 w-4"
-      >
-        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-        <rect x="14" y="14" width="7" height="7" rx="1.5" />
-      </svg>
+      <IconGrid class="h-4.5 w-4.5" />
     </button>
   </div>
 {/if}

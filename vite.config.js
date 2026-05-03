@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { crx } from '@crxjs/vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
+import Icons from 'unplugin-icons/vite';
 import manifest from './src-v2/manifest.config.js';
 
 export default defineConfig({
@@ -11,5 +12,10 @@ export default defineConfig({
     outDir: '../dist',
     emptyOutDir: true,
   },
-  plugins: [tailwindcss(), svelte(), crx({ manifest })],
+  plugins: [
+    tailwindcss(),
+    svelte(),
+    crx({ manifest }),
+    Icons({ compiler: 'svelte' }),
+  ],
 });

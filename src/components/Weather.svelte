@@ -8,12 +8,46 @@
     windDirectionLabel,
     uvLevel,
     aqiLevel,
-    isFutureTime,
+    nextFutureTime,
     formatTimeOfDay,
   } from '../lib/weather.js';
 
   let forecast = $state(null);
   let hovering = $state(false);
+
+  // Tick once a minute so the sunrise/sunset countdown stays fresh on
+  // tabs that stay open for a long time. Cheap — one Date.now() write
+  // per minute, only computed values inside the panel re-render.
+  let now = $state(Date.now());
+  $effect(() => {
+    const id = setInterval(() => {
+      now = Date.now();
+    }, 60_000);
+    return () => clearInterval(id);
+  });
+
+  /**
+   * Format a positive duration (ms) into a localized "in 8h 32m" /
+   * "8 小时 32 分钟后" style string. Returns null if the duration is
+   * <= 0 (caller should skip rendering in that case).
+   */
+  function formatCountdown(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) return null;
+    const totalMin = Math.floor(ms / 60_000);
+    if (totalMin < 1) {
+      // Less than a minute out — just show "1 min" rather than "0 min"
+      // to avoid a confusing zero. Rounding up is friendlier.
+      return t('weather_in_minutes').replace('{m}', '1');
+    }
+    if (totalMin < 60) {
+      return t('weather_in_minutes').replace('{m}', String(totalMin));
+    }
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return t('weather_in_hour_minutes')
+      .replace('{h}', String(h))
+      .replace('{m}', String(m));
+  }
 
   // getForecast caches to chrome.storage.local with 30min TTL keyed by
   // city + tempUnit, so opening many tabs in a 30min window doesn't
@@ -48,10 +82,32 @@
 {#if settings.showWeather && forecast}
   {@const today = forecast.daily?.[0]}
   {@const upcoming = forecast.daily?.slice(1) ?? []}
-  {@const showSunrise = today && isFutureTime(today.sunrise)}
-  {@const showSunset = today && isFutureTime(today.sunset)}
   {@const air = forecast.airQuality}
   {@const showAir = air && (air.aqi != null || air.pm25 != null)}
+  <!-- Next sunrise/sunset across today + tomorrow + day-after. We never
+       show a stale (past) one — at 9pm "next sunrise" is tomorrow's.
+       Cells are sorted by ISO time so the soonest event is on the left. -->
+  {@const allSunrises = forecast.daily?.map((d) => d.sunrise) ?? []}
+  {@const allSunsets = forecast.daily?.map((d) => d.sunset) ?? []}
+  {@const nextSunrise = nextFutureTime(allSunrises, now)}
+  {@const nextSunset = nextFutureTime(allSunsets, now)}
+  {@const sunEvents = [
+    nextSunrise && {
+      kind: 'sunrise',
+      icon: '🌅',
+      labelKey: 'weather_sunrise',
+      iso: nextSunrise,
+      ts: new Date(nextSunrise).getTime(),
+    },
+    nextSunset && {
+      kind: 'sunset',
+      icon: '🌇',
+      labelKey: 'weather_sunset',
+      iso: nextSunset,
+      ts: new Date(nextSunset).getTime(),
+    },
+  ].filter(Boolean).sort((a, b) => a.ts - b.ts)}
+  {@const showSun = sunEvents.length > 0}
 
   <div
     class="weather"
@@ -139,27 +195,31 @@
                 </span>
               </div>
             {/if}
+            </div>
+          </section>
+        {/if}
 
-              {#if showSunrise}
-                <div class="detail">
-                  <span class="detail-icon" aria-hidden="true">🌅</span>
-                  <span class="detail-label">{t('weather_sunrise')}</span>
-                  <span class="detail-value"
-                    >{formatTimeOfDay(today.sunrise)}</span
-                  >
+        <!-- Region: 日出日落 (next occurrence + minute-precision countdown).
+             Cells render in chronological order: soonest event on the left. -->
+        {#if showSun}
+          <section class="region">
+            <h3 class="region-title">{t('weather_section_sun')}</h3>
+            <div class="sun-grid">
+              {#each sunEvents as event (event.kind)}
+                {@const countdown = formatCountdown(event.ts - now)}
+                <div class="sun-cell">
+                  <div class="sun-icon" aria-hidden="true">{event.icon}</div>
+                  <div class="sun-label">{t(event.labelKey)}</div>
+                  <div class="sun-time">
+                    {formatTimeOfDay(event.iso, {
+                      hour12: settings.hourSystem === '12',
+                    })}
+                  </div>
+                  {#if countdown}
+                    <div class="sun-countdown">{countdown}</div>
+                  {/if}
                 </div>
-              {/if}
-              {#if showSunset}
-                <div class="detail">
-                  <span class="detail-icon" aria-hidden="true">🌇</span>
-                  <span class="detail-label">{t('weather_sunset')}</span>
-                  <span class="detail-value"
-                    >{formatTimeOfDay(today.sunset)}</span
-                  >
-                </div>
-              {/if}
-
-
+              {/each}
             </div>
           </section>
         {/if}
@@ -282,6 +342,51 @@
   .detail-value {
     font-variant-numeric: tabular-nums;
   }
+  /* Sun region: two centered cells side-by-side with a soft warm tint.
+     Tighter visual weight than the today details — designed to read
+     like a small almanac block, in keeping with the screensaver vibe. */
+  .sun-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .sun-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.55rem 0.4rem;
+    border-radius: 8px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 220, 180, 0.07),
+      rgba(255, 180, 130, 0.04)
+    );
+    border: 1px solid rgba(255, 200, 160, 0.1);
+  }
+  .sun-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+    margin-bottom: 0.1rem;
+  }
+  .sun-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+  .sun-time {
+    font-size: 1rem;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    margin-top: 0.05rem;
+  }
+  .sun-countdown {
+    font-size: 0.7rem;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+  }
+
   .days {
     display: flex;
     flex-direction: column;

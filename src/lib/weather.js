@@ -248,9 +248,41 @@ export function isFutureTime(isoString) {
   return Number.isFinite(t) && t > Date.now();
 }
 
-export function formatTimeOfDay(isoString) {
+/**
+ * Format a time-of-day for display alongside the clock. Mirrors the
+ * formatting convention in Clock.svelte (intentionally locale-independent
+ * AM/PM literal, never the localized "午前 / a.m." variants) so the
+ * sunrise/sunset times read consistently with the on-screen clock.
+ *
+ *   24h: "06:14"  (zero-padded hour)
+ *   12h: "6:14 AM" / "6:42 PM"  (no leading zero on hour, literal AM/PM)
+ */
+export function formatTimeOfDay(isoString, { hour12 = false } = {}) {
   if (!isoString) return null;
   const d = new Date(isoString);
   if (!Number.isFinite(d.getTime())) return null;
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  let h = d.getHours();
+  const m = d.getMinutes().toString().padStart(2, '0');
+  if (hour12) {
+    const suffix = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m} ${suffix}`;
+  }
+  return `${h.toString().padStart(2, '0')}:${m}`;
+}
+
+/**
+ * Pick the first future ISO timestamp from an array. Used to find the
+ * next sunrise/sunset across today + tomorrow (+ day-after as a safety
+ * margin). Returns null if everything is in the past or the array is
+ * empty/missing.
+ */
+export function nextFutureTime(isoStrings, now = Date.now()) {
+  if (!Array.isArray(isoStrings)) return null;
+  for (const iso of isoStrings) {
+    if (!iso) continue;
+    const t = new Date(iso).getTime();
+    if (Number.isFinite(t) && t > now) return iso;
+  }
+  return null;
 }

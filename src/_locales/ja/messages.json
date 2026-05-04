@@ -143,6 +143,15 @@
   "weather_sunset": {
     "message": "日の入り"
   },
+  "weather_section_sun": {
+    "message": "ちょっと散歩"
+  },
+  "weather_in_minutes": {
+    "message": "あと {m} 分"
+  },
+  "weather_in_hour_minutes": {
+    "message": "あと {h} 時間 {m} 分"
+  },
   "weather_uv_low": {
     "message": "弱"
   },

@@ -143,6 +143,15 @@
   "weather_sunset": {
     "message": "日落"
   },
+  "weather_section_sun": {
+    "message": "出去走走"
+  },
+  "weather_in_minutes": {
+    "message": "{m} 分鐘後"
+  },
+  "weather_in_hour_minutes": {
+    "message": "{h} 小時 {m} 分鐘後"
+  },
   "weather_uv_low": {
     "message": "弱"
   },

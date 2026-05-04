@@ -356,9 +356,6 @@
   "options_zen_auto_exit": {
     "message": "Auto exit"
   },
-  "options_zen_minutes_suffix": {
-    "message": "min"
-  },
   "zen_breath_inhale": {
     "message": "Inhale"
   },
@@ -376,5 +373,17 @@
   },
   "zen_reminder_dismiss": {
     "message": "Later"
+  },
+  "options_zen_reminder_prefix": {
+    "message": "every"
+  },
+  "options_zen_reminder_suffix": {
+    "message": "min"
+  },
+  "options_zen_autoexit_prefix": {
+    "message": "after"
+  },
+  "options_zen_autoexit_suffix": {
+    "message": "min"
   }
 }

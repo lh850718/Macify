@@ -356,9 +356,6 @@
   "options_zen_auto_exit": {
     "message": "自動終了"
   },
-  "options_zen_minutes_suffix": {
-    "message": "分"
-  },
   "zen_breath_inhale": {
     "message": "吸う"
   },
@@ -376,5 +373,17 @@
   },
   "zen_reminder_dismiss": {
     "message": "あとで"
+  },
+  "options_zen_reminder_prefix": {
+    "message": ""
+  },
+  "options_zen_reminder_suffix": {
+    "message": "分ごと"
+  },
+  "options_zen_autoexit_prefix": {
+    "message": ""
+  },
+  "options_zen_autoexit_suffix": {
+    "message": "分後"
   }
 }

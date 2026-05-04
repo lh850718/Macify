@@ -445,6 +445,11 @@
           </label>
           {#if settings.zenReminderEnabled}
             <div class="flex items-center justify-end gap-2">
+              {#if t("options_zen_reminder_prefix")}
+                <span class="text-sm text-slate-500">
+                  {t("options_zen_reminder_prefix")}
+                </span>
+              {/if}
               <input
                 type="number"
                 min="1"
@@ -462,7 +467,7 @@
                 }}
               />
               <span class="text-sm text-slate-500">
-                {t("options_zen_minutes_suffix")}
+                {t("options_zen_reminder_suffix")}
               </span>
             </div>
           {/if}
@@ -489,6 +494,11 @@
           </label>
           {#if settings.zenAutoExitEnabled}
             <div class="flex items-center justify-end gap-2">
+              {#if t("options_zen_autoexit_prefix")}
+                <span class="text-sm text-slate-500">
+                  {t("options_zen_autoexit_prefix")}
+                </span>
+              {/if}
               <input
                 type="number"
                 min="1"
@@ -506,7 +516,7 @@
                 }}
               />
               <span class="text-sm text-slate-500">
-                {t("options_zen_minutes_suffix")}
+                {t("options_zen_autoexit_suffix")}
               </span>
             </div>
           {/if}

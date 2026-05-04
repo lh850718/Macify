@@ -356,9 +356,6 @@
   "options_zen_auto_exit": {
     "message": "自动退出"
   },
-  "options_zen_minutes_suffix": {
-    "message": "分钟"
-  },
   "zen_breath_inhale": {
     "message": "吸气"
   },
@@ -376,5 +373,17 @@
   },
   "zen_reminder_dismiss": {
     "message": "稍后"
+  },
+  "options_zen_reminder_prefix": {
+    "message": "每隔"
+  },
+  "options_zen_reminder_suffix": {
+    "message": "分钟"
+  },
+  "options_zen_autoexit_prefix": {
+    "message": "运行"
+  },
+  "options_zen_autoexit_suffix": {
+    "message": "分钟后"
   }
 }

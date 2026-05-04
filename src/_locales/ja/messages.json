@@ -282,7 +282,7 @@
     "message": "翻訳"
   },
   "options_translation_description": {
-    "message": "Chrome 内蔵の on-device Translator API を使い、英語の格言を表示言語に翻訳します。初回のモデルダウンロード以外、外部 API への通信はありません。"
+    "message": "Chrome 内蔵の on-device Translator API を使い、英語の格言を表示言語に翻訳します。初回のモデルダウンロード以外、新たなネットワークリクエストはありません。"
   },
   "options_translation_model_label": {
     "message": "モデル"

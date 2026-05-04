@@ -282,7 +282,7 @@
     "message": "翻譯"
   },
   "options_translation_description": {
-    "message": "使用 Chrome 內建的 on-device Translator API 把英文格言翻譯成你設定的顯示語言。除首次模型下載外，無任何遠端 API 呼叫。"
+    "message": "使用 Chrome 內建的 on-device Translator API 把英文格言翻譯成你設定的顯示語言。除首次模型下載外，無任何新的網路請求。"
   },
   "options_translation_model_label": {
     "message": "模型"

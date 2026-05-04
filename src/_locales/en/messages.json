@@ -282,7 +282,7 @@
     "message": "Translation"
   },
   "options_translation_description": {
-    "message": "Translates English mottos into your display language using Chrome's built-in on-device Translator API. No external API or network calls beyond the one-time model download."
+    "message": "Translates English mottos into your display language using Chrome's built-in on-device Translator API. No new network requests beyond the one-time model download."
   },
   "options_translation_model_label": {
     "message": "Model"

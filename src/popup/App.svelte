@@ -1,6 +1,7 @@
 <script>
   import { settings } from "../lib/settings.svelte.js";
   import { loadLanguage, resolveLanguage } from "../lib/i18n.svelte.js";
+  import { zen } from "../lib/zen.svelte.js";
   import Clock from "../components/Clock.svelte";
   import VideoBackground from "../components/VideoBackground.svelte";
   import VideoMetadata from "../components/VideoMetadata.svelte";
@@ -10,16 +11,28 @@
   import RefreshButton from "../components/RefreshButton.svelte";
   import Motto from "../components/Motto.svelte";
   import DonatePill from "../components/DonatePill.svelte";
+  import ZenReminderPill from "../components/ZenReminderPill.svelte";
+  import BreathingGuide from "../components/BreathingGuide.svelte";
 
   $effect(() => {
     loadLanguage(resolveLanguage(settings.userLanguage));
   });
 </script>
 
-<VideoBackground />
+<!-- Zen stage: the element fullscreened on entering Zen. Wrapping the
+     video lets sibling overlays (BreathingGuide) appear inside the
+     fullscreen view rather than being hidden by it. -->
+<div id="zen-stage">
+  <VideoBackground />
+  {#if zen.active && settings.zenBreathingPattern !== 'off'}
+    <BreathingGuide />
+  {/if}
+</div>
+
 <VideoMetadata />
 <Weather />
 <DonatePill />
+<ZenReminderPill />
 
 <!-- Bottom-left button stack. flex-col-reverse anchors the first DOM
      child at the bottom; subsequent buttons appear above it. -->
@@ -56,5 +69,12 @@
     color: #eee;
     font-family: system-ui, sans-serif;
     overflow: hidden;
+  }
+  /* Stage is purely a fullscreen anchor — no layout impact when not in
+     fullscreen. Background restores black so the fullscreen container
+     itself isn't transparent during the brief moment before <video>
+     paints. */
+  #zen-stage {
+    background: #000;
   }
 </style>

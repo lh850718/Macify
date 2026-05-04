@@ -328,5 +328,56 @@
   },
   "donate_pill_dismiss": {
     "message": "Dismiss"
+  },
+  "options_zen_section": {
+    "message": "Zen mode"
+  },
+  "options_zen_music": {
+    "message": "Play music"
+  },
+  "options_zen_breathing": {
+    "message": "Breathing guide"
+  },
+  "options_zen_breathing_off": {
+    "message": "Off"
+  },
+  "options_zen_breathing_coherent": {
+    "message": "Coherent (5–5)"
+  },
+  "options_zen_breathing_box": {
+    "message": "Box (4–4–4–4)"
+  },
+  "options_zen_breathing_478": {
+    "message": "Relaxing (4–7–8)"
+  },
+  "options_zen_reminder": {
+    "message": "Break reminder"
+  },
+  "options_zen_auto_exit": {
+    "message": "Auto exit"
+  },
+  "options_zen_off": {
+    "message": "Off"
+  },
+  "options_zen_minutes_suffix": {
+    "message": "min"
+  },
+  "zen_breath_inhale": {
+    "message": "Inhale"
+  },
+  "zen_breath_exhale": {
+    "message": "Exhale"
+  },
+  "zen_breath_hold": {
+    "message": "Hold"
+  },
+  "zen_reminder_message": {
+    "message": "{n} min on this screen — take a moment?"
+  },
+  "zen_reminder_cta": {
+    "message": "Enter Zen"
+  },
+  "zen_reminder_dismiss": {
+    "message": "Later"
   }
 }

@@ -15,6 +15,12 @@ export const DEFAULTS = Object.freeze({
   reverseProxy: true,
   showVideoMetadata: true,
   translateMotto: false,
+  zenMusic: true,
+  zenBreathingPattern: 'off', // 'off' | 'coherent' | 'box' | '478'
+  zenReminderEnabled: false,
+  zenReminderMinutes: 60,
+  zenAutoExitEnabled: false,
+  zenAutoExitMinutes: 15,
 });
 
 export const KNOWN_KEYS = Object.freeze(Object.keys(DEFAULTS));

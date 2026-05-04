@@ -328,5 +328,56 @@
   },
   "donate_pill_dismiss": {
     "message": "閉じる"
+  },
+  "options_zen_section": {
+    "message": "禅モード"
+  },
+  "options_zen_music": {
+    "message": "音楽を再生"
+  },
+  "options_zen_breathing": {
+    "message": "呼吸ガイド"
+  },
+  "options_zen_breathing_off": {
+    "message": "なし"
+  },
+  "options_zen_breathing_coherent": {
+    "message": "コヒーレント呼吸 (5–5)"
+  },
+  "options_zen_breathing_box": {
+    "message": "ボックス呼吸 (4–4–4–4)"
+  },
+  "options_zen_breathing_478": {
+    "message": "リラックス呼吸 (4–7–8)"
+  },
+  "options_zen_reminder": {
+    "message": "休憩リマインダー"
+  },
+  "options_zen_auto_exit": {
+    "message": "自動終了"
+  },
+  "options_zen_off": {
+    "message": "オフ"
+  },
+  "options_zen_minutes_suffix": {
+    "message": "分"
+  },
+  "zen_breath_inhale": {
+    "message": "吸う"
+  },
+  "zen_breath_exhale": {
+    "message": "吐く"
+  },
+  "zen_breath_hold": {
+    "message": "止める"
+  },
+  "zen_reminder_message": {
+    "message": "{n} 分間画面の前にいます。少し休みませんか？"
+  },
+  "zen_reminder_cta": {
+    "message": "禅モードへ"
+  },
+  "zen_reminder_dismiss": {
+    "message": "あとで"
   }
 }

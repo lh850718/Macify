@@ -328,5 +328,56 @@
   },
   "donate_pill_dismiss": {
     "message": "關閉"
+  },
+  "options_zen_section": {
+    "message": "禪意模式"
+  },
+  "options_zen_music": {
+    "message": "播放音樂"
+  },
+  "options_zen_breathing": {
+    "message": "呼吸引導"
+  },
+  "options_zen_breathing_off": {
+    "message": "無"
+  },
+  "options_zen_breathing_coherent": {
+    "message": "共振呼吸 (5–5)"
+  },
+  "options_zen_breathing_box": {
+    "message": "方塊呼吸 (4–4–4–4)"
+  },
+  "options_zen_breathing_478": {
+    "message": "放鬆呼吸 (4–7–8)"
+  },
+  "options_zen_reminder": {
+    "message": "休息提醒"
+  },
+  "options_zen_auto_exit": {
+    "message": "自動退出"
+  },
+  "options_zen_off": {
+    "message": "關閉"
+  },
+  "options_zen_minutes_suffix": {
+    "message": "分鐘"
+  },
+  "zen_breath_inhale": {
+    "message": "吸氣"
+  },
+  "zen_breath_exhale": {
+    "message": "呼氣"
+  },
+  "zen_breath_hold": {
+    "message": "屏息"
+  },
+  "zen_reminder_message": {
+    "message": "已經在螢幕前 {n} 分鐘，要不要禪意一下？"
+  },
+  "zen_reminder_cta": {
+    "message": "進入禪意"
+  },
+  "zen_reminder_dismiss": {
+    "message": "稍後"
   }
 }

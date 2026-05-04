@@ -328,5 +328,56 @@
   },
   "donate_pill_dismiss": {
     "message": "Cerrar"
+  },
+  "options_zen_section": {
+    "message": "Modo Zen"
+  },
+  "options_zen_music": {
+    "message": "Reproducir música"
+  },
+  "options_zen_breathing": {
+    "message": "Guía de respiración"
+  },
+  "options_zen_breathing_off": {
+    "message": "Ninguna"
+  },
+  "options_zen_breathing_coherent": {
+    "message": "Coherente (5–5)"
+  },
+  "options_zen_breathing_box": {
+    "message": "Cuadrada (4–4–4–4)"
+  },
+  "options_zen_breathing_478": {
+    "message": "Relajante (4–7–8)"
+  },
+  "options_zen_reminder": {
+    "message": "Recordatorio de descanso"
+  },
+  "options_zen_auto_exit": {
+    "message": "Salida automática"
+  },
+  "options_zen_off": {
+    "message": "Desactivado"
+  },
+  "options_zen_minutes_suffix": {
+    "message": "min"
+  },
+  "zen_breath_inhale": {
+    "message": "Inhala"
+  },
+  "zen_breath_exhale": {
+    "message": "Exhala"
+  },
+  "zen_breath_hold": {
+    "message": "Retén"
+  },
+  "zen_reminder_message": {
+    "message": "{n} min frente a la pantalla — ¿una pausa?"
+  },
+  "zen_reminder_cta": {
+    "message": "Modo Zen"
+  },
+  "zen_reminder_dismiss": {
+    "message": "Luego"
   }
 }

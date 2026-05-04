@@ -143,6 +143,15 @@
   "weather_sunset": {
     "message": "Atardecer"
   },
+  "weather_section_sun": {
+    "message": "Sal a pasear"
+  },
+  "weather_in_minutes": {
+    "message": "en {m} min"
+  },
+  "weather_in_hour_minutes": {
+    "message": "en {h} h {m} min"
+  },
   "weather_uv_low": {
     "message": "Bajo"
   },

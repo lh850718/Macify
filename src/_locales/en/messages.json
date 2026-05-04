@@ -143,6 +143,15 @@
   "weather_sunset": {
     "message": "Sunset"
   },
+  "weather_section_sun": {
+    "message": "Take a walk"
+  },
+  "weather_in_minutes": {
+    "message": "in {m}m"
+  },
+  "weather_in_hour_minutes": {
+    "message": "in {h}h {m}m"
+  },
   "weather_uv_low": {
     "message": "Low"
   },

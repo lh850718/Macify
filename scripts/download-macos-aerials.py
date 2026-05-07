@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import shutil
 import ssl
 import sys
@@ -43,6 +44,7 @@ class AerialVideo:
     label: str
     url: str
     filename: str
+    categories: List[str]
 
 
 @dataclass(frozen=True)
@@ -104,6 +106,20 @@ def parse_args() -> argparse.Namespace:
         "--limit",
         type=int,
         help="Download at most this many videos. Useful for testing.",
+    )
+    parser.add_argument(
+        "--random",
+        type=int,
+        help="Select this many random videos from the chosen scope.",
+    )
+    parser.add_argument(
+        "--category",
+        help="Comma-separated category names to include, for example: Landscapes,Cities.",
+    )
+    parser.add_argument(
+        "--list-categories",
+        action="store_true",
+        help="List available categories from the manifest and exit.",
     )
     parser.add_argument(
         "--retries",
@@ -192,12 +208,49 @@ def is_video_url(value: Any) -> bool:
     return Path(urlparse(value).path).suffix.lower() in {".mov", ".mp4", ".m4v"}
 
 
+def category_name_from_key(localized_name_key: Any) -> Optional[str]:
+    if not isinstance(localized_name_key, str) or not localized_name_key:
+        return None
+    for prefix in ("AerialCategory", "AerialSubcategory"):
+        if localized_name_key.startswith(prefix):
+            return localized_name_key[len(prefix) :]
+    return localized_name_key
+
+
+def build_category_index(manifest: Any) -> Dict[str, str]:
+    if not isinstance(manifest, dict):
+        return {}
+
+    category_index: Dict[str, str] = {}
+    for category in manifest.get("categories", []) or []:
+        if not isinstance(category, dict):
+            continue
+
+        category_id = category.get("id")
+        category_name = category_name_from_key(category.get("localizedNameKey"))
+        if isinstance(category_id, str) and category_name:
+            category_index[category_id] = category_name
+
+        for subcategory in category.get("subcategories", []) or []:
+            if not isinstance(subcategory, dict):
+                continue
+            subcategory_id = subcategory.get("id")
+            if isinstance(subcategory_id, str) and category_name:
+                category_index[subcategory_id] = category_name
+
+    return category_index
+
+
 def filename_from_url(url: str, asset: Dict[str, Any]) -> str:
+    asset_id = asset.get("id")
+    if isinstance(asset_id, str) and asset_id:
+        return f"{asset_id}.mov"
+
     filename = unquote(Path(urlparse(url).path).name)
     if filename:
         return filename
 
-    fallback_name = asset.get("id") or asset.get("shotID") or "aerial-video"
+    fallback_name = asset.get("shotID") or "aerial-video"
     return f"{fallback_name}.mov"
 
 
@@ -213,6 +266,7 @@ def label_for_asset(asset: Dict[str, Any], fallback_filename: str) -> str:
 def collect_videos(manifest: Any, preferred_quality: str) -> List[AerialVideo]:
     videos: List[AerialVideo] = []
     seen_urls: Set[str] = set()
+    category_index = build_category_index(manifest)
 
     for asset in manifest_assets(manifest):
         url = choose_url(asset, preferred_quality)
@@ -220,16 +274,122 @@ def collect_videos(manifest: Any, preferred_quality: str) -> List[AerialVideo]:
             continue
 
         filename = filename_from_url(url, asset)
+        categories = sorted(
+            {
+                category_index[category_id]
+                for category_id in asset.get("categories", []) or []
+                if category_id in category_index
+            }
+        )
         videos.append(
             AerialVideo(
                 label=label_for_asset(asset, filename),
                 url=url,
                 filename=filename,
+                categories=categories,
             )
         )
         seen_urls.add(url)
 
     return videos
+
+
+def category_counts(videos: List[AerialVideo]) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for video in videos:
+        for category in video.categories or ["Uncategorized"]:
+            counts[category] = counts.get(category, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def print_categories(videos: List[AerialVideo]) -> None:
+    counts = category_counts(videos)
+    if not counts:
+        print("No categories found in the manifest.")
+        return
+
+    print("Available categories:")
+    for category, count in counts.items():
+        print(f"  - {category}: {count}")
+
+
+def parse_category_filter(category_arg: Optional[str]) -> Set[str]:
+    if not category_arg:
+        return set()
+    return {
+        category.strip().lower()
+        for category in category_arg.split(",")
+        if category.strip()
+    }
+
+
+def filter_by_category(
+    videos: List[AerialVideo],
+    category_arg: Optional[str],
+) -> List[AerialVideo]:
+    requested = parse_category_filter(category_arg)
+    if not requested:
+        return videos
+
+    return [
+        video
+        for video in videos
+        if requested.intersection(category.lower() for category in video.categories)
+    ]
+
+
+def select_random(videos: List[AerialVideo], count: Optional[int]) -> List[AerialVideo]:
+    if count is None:
+        return videos
+    if count < 1:
+        raise ValueError("--random must be greater than 0.")
+    if count >= len(videos):
+        return videos
+    return random.sample(videos, count)
+
+
+def apply_limit(videos: List[AerialVideo], limit: Optional[int]) -> List[AerialVideo]:
+    if limit is None:
+        return videos
+    if limit < 1:
+        raise ValueError("--limit must be greater than 0.")
+    return videos[:limit]
+
+
+def matching_local_count(videos: List[AerialVideo], output_dir: Path) -> int:
+    return sum(1 for video in videos if (output_dir / video.filename).exists())
+
+
+def choose_interactive_scope(
+    videos: List[AerialVideo],
+    output_dir: Path,
+) -> List[AerialVideo]:
+    print("What would you like to do?")
+    print("  1) Download the full catalog")
+    print("  2) Download a random N videos")
+    print("  3) Download by category")
+    choice = input("Choose 1, 2, or 3 [1]: ").strip() or "1"
+
+    if choice == "1":
+        selected = videos
+    elif choice == "2":
+        count_text = input("How many random videos? ").strip()
+        try:
+            count = int(count_text)
+        except ValueError as error:
+            raise ValueError("Random video count must be a number.") from error
+        selected = select_random(videos, count)
+    elif choice == "3":
+        print_categories(videos)
+        category_arg = input("Category name(s), comma-separated: ").strip()
+        selected = filter_by_category(videos, category_arg)
+    else:
+        raise ValueError("Invalid choice.")
+
+    print("")
+    print(f"Selected scope: {len(selected)} videos")
+    print(f"Local matching files: {matching_local_count(selected, output_dir)}")
+    return selected
 
 
 def human_bytes(size: Optional[int]) -> str:
@@ -498,20 +658,29 @@ def download_file(
 
 def main() -> int:
     args = parse_args()
+    interactive_scope = len(sys.argv) == 1
     try:
-        if args.manifest and not args.output_dir:
+        if args.manifest and not args.output_dir and not args.list_categories:
             raise ValueError("--output-dir is required when --manifest is set.")
 
         manifest_path = first_existing_manifest(args.manifest)
         output_dir = args.output_dir or NEW_VIDEO_DIR
         manifest = load_manifest(manifest_path)
         videos = collect_videos(manifest, args.quality)
+        if args.list_categories:
+            print_categories(videos)
+            return 0
+        if interactive_scope:
+            if not sys.stdin.isatty():
+                raise ValueError("Pass --dry-run, --yes, or another flag when running non-interactively.")
+            videos = choose_interactive_scope(videos, output_dir)
+        else:
+            videos = filter_by_category(videos, args.category)
+            videos = select_random(videos, args.random)
+            videos = apply_limit(videos, args.limit)
     except (FileNotFoundError, ValueError, json.JSONDecodeError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
-
-    if args.limit is not None:
-        videos = videos[: args.limit]
 
     print(f"Manifest: {manifest_path}")
     print(f"Output:   {output_dir}")

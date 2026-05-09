@@ -1,0 +1,106 @@
+<view class="settings-page">
+  <view class="header">
+    <text class="title">Macify</text>
+    <text class="subtitle">微信小程序版</text>
+  </view>
+
+  <view class="section">
+    <view class="section-title">显示</view>
+    <view class="row">
+      <text class="label">时间</text>
+      <switch checked="{{settings.showClock}}" data-key="showClock" bindchange="onSwitchChange" color="#47c7a2" />
+    </view>
+    <view class="row">
+      <text class="label">天气</text>
+      <switch checked="{{settings.showWeather}}" data-key="showWeather" bindchange="onSwitchChange" color="#47c7a2" />
+    </view>
+    <view class="row">
+      <text class="label">语录</text>
+      <switch checked="{{settings.showQuote}}" data-key="showQuote" bindchange="onSwitchChange" color="#47c7a2" />
+    </view>
+    <view class="row">
+      <text class="label">视频信息</text>
+      <switch checked="{{settings.showVideoMeta}}" data-key="showVideoMeta" bindchange="onSwitchChange" color="#47c7a2" />
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">天气</view>
+    <view class="field">
+      <text class="label">城市</text>
+      <input
+        class="input"
+        value="{{settings.city}}"
+        placeholder="Shanghai"
+        bindinput="onCityInput"
+        bindblur="onCityBlur"
+      />
+    </view>
+    <radio-group class="radio-row" bindchange="onTempUnitChange">
+      <label class="radio-item">
+        <radio value="celsius" checked="{{tempIsCelsius}}" color="#47c7a2" />
+        <text>摄氏度</text>
+      </label>
+      <label class="radio-item">
+        <radio value="fahrenheit" checked="{{tempIsFahrenheit}}" color="#47c7a2" />
+        <text>华氏度</text>
+      </label>
+    </radio-group>
+  </view>
+
+  <view class="section">
+    <view class="section-title">视频</view>
+    <radio-group class="radio-row" bindchange="onVideoSourceChange">
+      <label class="radio-item">
+        <radio value="apple" checked="{{videoSourceIsApple}}" color="#47c7a2" />
+        <text>Apple 原始视频</text>
+      </label>
+      <label class="radio-item">
+        <radio value="lite" checked="{{videoSourceIsLite}}" color="#47c7a2" />
+        <text>轻量 CDN</text>
+      </label>
+    </radio-group>
+
+    <view class="field">
+      <text class="label">轻量 CDN 域名</text>
+      <input
+        class="input"
+        value="{{settings.liteVideoBase}}"
+        placeholder="https://your-cdn.example.com"
+        bindinput="onLiteBaseInput"
+        bindblur="onLiteBaseBlur"
+      />
+    </view>
+
+    <picker
+      mode="selector"
+      range="{{categoryOptions}}"
+      range-key="label"
+      value="{{categoryIndex}}"
+      bindchange="onCategoryChange"
+    >
+      <view class="row picker-row">
+        <text class="label">播放范围</text>
+        <text class="value">{{categoryText}}</text>
+      </view>
+    </picker>
+
+    <view class="row">
+      <text class="label">反向代理</text>
+      <switch checked="{{settings.reverseProxy}}" data-key="reverseProxy" bindchange="onSwitchChange" color="#47c7a2" />
+    </view>
+
+    <view class="field">
+      <text class="label">代理域名</text>
+      <input
+        class="input"
+        value="{{settings.proxyBase}}"
+        placeholder="https://your-host.example.com"
+        bindinput="onProxyInput"
+        bindblur="onProxyBlur"
+      />
+    </view>
+  </view>
+
+  <button class="reset-button" bindtap="resetAll">恢复默认</button>
+</view>

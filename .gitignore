@@ -20,6 +20,7 @@ AGENTS.md
 .env
 .env.local
 .env.*.local
+project.private.config.json
 
 macify-music
 sketch

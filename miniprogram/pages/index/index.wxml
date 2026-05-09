@@ -1,0 +1,58 @@
+<view class="screen">
+  <image
+    wx:if="{{currentVideo && currentVideo.poster && !videoReady}}"
+    class="poster"
+    src="{{currentVideo.poster}}"
+    mode="aspectFill"
+  />
+
+  <video
+    wx:if="{{currentVideo && currentVideo.url}}"
+    class="aerial-video"
+    src="{{currentVideo.url}}"
+    poster="{{currentVideo.poster}}"
+    autoplay="{{true}}"
+    muted="{{true}}"
+    controls="{{false}}"
+    loop="{{false}}"
+    show-center-play-btn="{{false}}"
+    show-play-btn="{{false}}"
+    enable-progress-gesture="{{false}}"
+    object-fit="cover"
+    bindplay="onVideoPlay"
+    bindended="onVideoEnded"
+    binderror="onVideoError"
+  />
+
+  <view class="shade"></view>
+
+  <view class="topbar">
+    <view wx:if="{{settings.showVideoMeta && currentVideo}}" class="meta">
+      <text class="meta-title">{{currentVideo.name}}</text>
+    </view>
+
+    <view wx:if="{{settings.showWeather && forecast}}" class="weather glass">
+      <text class="weather-temp">{{forecast.current.temperature}}°</text>
+      <text class="weather-copy">{{weatherLabel}} · {{forecast.location}}</text>
+    </view>
+  </view>
+
+  <view class="center">
+    <view wx:if="{{settings.showClock}}" class="clock-wrap">
+      <text class="clock">{{clock}}</text>
+      <text class="date">{{dateText}}</text>
+    </view>
+
+    <view wx:if="{{settings.showQuote && currentQuote}}" class="quote">
+      <text class="quote-content">{{currentQuote.content}}</text>
+      <text class="quote-author">- {{currentQuote.author}}</text>
+    </view>
+  </view>
+
+  <view class="bottom-actions">
+    <view class="icon-button refresh-button" bindtap="nextVideo">↻</view>
+    <view class="icon-button dots-button" bindtap="openSettings">···</view>
+  </view>
+
+  <view wx:if="{{videoError}}" class="toast glass">{{videoError}}</view>
+</view>

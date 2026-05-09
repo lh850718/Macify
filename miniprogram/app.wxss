@@ -1,0 +1,17 @@
+page {
+  min-height: 100vh;
+  background: #05070a;
+  color: #f7f8fb;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+button {
+  margin: 0;
+}
+
+.glass {
+  background: rgba(6, 10, 16, 0.46);
+  border: 1rpx solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 12rpx 48rpx rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18rpx);
+}

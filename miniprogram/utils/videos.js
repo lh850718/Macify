@@ -20,6 +20,7 @@ const APPLE_CATEGORY_OPTIONS = Object.freeze([
   { value: 'Landscapes', label: '自然景观' },
   { value: 'Cities', label: '城市景观' },
   { value: 'Underwater', label: '水下景观' },
+  { value: 'Space', label: '太空' },
 ]);
 const PREMIUM_CATEGORY_OPTIONS = Object.freeze([
   { value: 'all', label: '全部' },

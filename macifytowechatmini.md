@@ -104,7 +104,7 @@ Coverr
 
 ### 分类必须保持简洁
 
-设置页不展示“地球”分类。Apple 轻量源数据里可以保留 Apple 原始 `Space` 分类，但不提供单独筛选入口；Premium Free Aerial 当前只使用：
+设置页恢复 Apple 原始 `Space` 分类筛选入口，但产品里显示为“太空”，不要再叫“地球”。Premium Free Aerial 当前只使用：
 
 ```text
 Landscapes
@@ -436,7 +436,7 @@ pixabay-34855
 
 本次先使用临时目录 `/private/tmp/macify-premium-approved-20260512-17` 上传 17 个新视频，避免带上被删除的 `pixabay-214940`。随后刷新 `local-miniprogram-premium-aerial/manifest.json` / `manifest.csv` 为完整 67 条记录，并再次运行 `scripts/miniprogram/upload-cos-videos.mjs` 刷新远端完整 67 条 manifest；第二次同步显示 67 个视频全部 skip，只补 ACL 和 manifest。未触碰 Apple 路径。已将 `PREMIUM_FREE_AERIAL_SOURCE_VERSION` bump 到 `premium-free-aerial-1080p-cos-20260512-67`，更新后会失效旧 Premium 本地缓存。
 
-2026-05-12 新增 Premium Free Aerial 主分类 `Motion`，产品显示为“运转”。已把 `夜营火光`、`夜空烟火`、`稻田风机`、`琵琶湖烟火`、`麦田收割`、`营火煮茶`、`炉火冬夜`、`黑胶回声`、`齿轮流光` 归入该分类；验证脚本允许 `Motion`。随后删除“直接 URL”视频源和设置页输入框；旧本地设置里如果仍是 `videoSource: 'direct'`，会自动归回 `lite`。同时从设置页移除“地球”分类，旧本地 `shuffleScope: 'Space'` 会自动归回 `all`。Pixabay 下载页、B 站页面、需要 Cookie/登录/防盗链的链接都不要直接塞给小程序 `<video>`，应先转到自有 COS/CDN 或正式素材库流程。
+2026-05-12 新增 Premium Free Aerial 主分类 `Motion`，产品显示为“运转”。已把 `夜营火光`、`夜空烟火`、`稻田风机`、`琵琶湖烟火`、`麦田收割`、`营火煮茶`、`炉火冬夜`、`黑胶回声`、`齿轮流光` 归入该分类；验证脚本允许 `Motion`。随后删除“直接 URL”视频源和设置页输入框；旧本地设置里如果仍是 `videoSource: 'direct'`，会自动归回 `lite`。Apple 原始 `Space` 分类在设置页恢复显示，但中文名改为“太空”，不再显示“地球”。Pixabay 下载页、B 站页面、需要 Cookie/登录/防盗链的链接都不要直接塞给小程序 `<video>`，应先转到自有 COS/CDN 或正式素材库流程。
 
 如果用户感觉没有刷到这批新视频，原因通常是 COS 已上传但小程序包还没有重新编译/上传：视频随机池来自打包进小程序的 `miniprogram/data/premium-free-aerial-videos.js`，不是远端 manifest。高端免费航拍随机池只读取 `qualityTier: 'published'` 的记录，避免后续候选样片混进正式池。测试时请确认设置里视频库选的是“高端免费航拍”、分类是“全部”。
 
@@ -2829,7 +2829,7 @@ macify-premium/videos/<source-video-id>.mp4
 
 - 先候选、再验片、再小样、最后才批量转码和上传。
 - 5 个来源每源一期目标 100 条候选；100 不是永久上限，后续可以继续扩充，但不能为了凑数牺牲质感。
-- 当前 Premium Free Aerial 主分类只使用：`Landscapes`、`Cities`、`AnimalsAndPlants`、`Motion`、`Underwater`；设置页不展示“地球”分类。
+- 当前 Premium Free Aerial 主分类只使用：`Landscapes`、`Cities`、`AnimalsAndPlants`、`Motion`、`Underwater`；Apple 原始 `Space` 分类在设置页显示为“太空”。
 - 不使用 `Mac` / `其他` 分类；原本可能归入 `Mac` 的视频必须归入上面这些主分类之一，否则不进入当前库。
 - 海岸、山脉、森林、湖泊、日落等细节只写入 `tags` / `subcategories` / `locationName` / `description`。
 - 每条视频必须保留来源页、授权、署名、授权备注、地点/场景、中文说明；后续审片必须同步审阅标题、地点和介绍文案。

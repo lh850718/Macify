@@ -74,9 +74,6 @@ function normalizeSettings(raw) {
   if (settings.shuffleScope === 'Animals') {
     settings.shuffleScope = 'AnimalsAndPlants';
   }
-  if (settings.shuffleScope === 'Space') {
-    settings.shuffleScope = 'all';
-  }
   if (!raw || raw.liteSourceVersion !== LITE_SOURCE_VERSION) {
     if (!raw || settings.videoSource === 'apple1080') {
       settings.videoSource = 'lite';

@@ -12,6 +12,9 @@
     "zip": "node scripts/zip.js",
     "build:quotes": "node scripts/build-quotes.mjs",
     "build:videos": "node scripts/build-videos.mjs",
+    "mini:lite": "node scripts/miniprogram/prepare-lite-videos.mjs",
+    "mini:premium:validate": "node scripts/miniprogram/validate-premium-aerial-videos.mjs",
+    "mini:cos": "node scripts/miniprogram/upload-cos-videos.mjs",
     "download:aerials": "cd scripts && python3 -m aerial_downloader.main"
   },
   "devDependencies": {

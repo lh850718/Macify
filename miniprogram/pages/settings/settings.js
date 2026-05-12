@@ -1,21 +1,73 @@
-const { getSettings, saveSettings, resetSettings } = require('../../utils/storage.js');
-const { CATEGORY_OPTIONS, categoryLabel } = require('../../utils/videos.js');
+const { getSettings, saveSettings } = require('../../utils/storage.js');
+const {
+  VIDEO_LIBRARY_OPTIONS,
+  activeVideoLibrary,
+  categoryLabel,
+  categoryOptionsForLibrary,
+} = require('../../utils/videos.js');
 
-function categoryIndexFor(value) {
-  const index = CATEGORY_OPTIONS.findIndex((item) => item.value === value);
+function storedVideoLibrary(settings) {
+  return settings.videoLibrary === 'premiumFreeAerial'
+    ? 'premiumFreeAerial'
+    : 'apple';
+}
+
+function categoryIndexFor(value, library) {
+  const options = categoryOptionsForLibrary(library);
+  const index = options.findIndex((item) => item.value === value);
   return index >= 0 ? index : 0;
+}
+
+function categoryOptionsFor(value, library) {
+  const options = categoryOptionsForLibrary(library);
+  const selected = options.some((item) => item.value === value) ? value : options[0].value;
+  return options.map((item) => ({
+    ...item,
+    selected: item.value === selected,
+  }));
+}
+
+function viewDataForSettings(settings) {
+  const library = activeVideoLibrary(settings);
+  const storedLibrary = storedVideoLibrary(settings);
+  return {
+    settings,
+    categoryOptions: categoryOptionsFor(settings.shuffleScope, library),
+    categoryIndex: categoryIndexFor(settings.shuffleScope, library),
+    categoryText: categoryLabel(settings.shuffleScope, library),
+    tempIsCelsius: settings.tempUnit === 'celsius',
+    tempIsFahrenheit: settings.tempUnit === 'fahrenheit',
+    videoSourceIsApple1080: settings.videoSource === 'apple1080',
+    videoSourceIsLite: settings.videoSource === 'lite',
+    videoLibraryOptions: VIDEO_LIBRARY_OPTIONS.map((item) => ({
+      ...item,
+      selected: item.value === storedLibrary,
+    })),
+    videoLibraryIsApple: storedLibrary === 'apple',
+    videoLibraryIsPremiumFreeAerial: storedLibrary === 'premiumFreeAerial',
+  };
+}
+
+function formValue(values, settings, key) {
+  if (values && Object.prototype.hasOwnProperty.call(values, key)) {
+    return values[key];
+  }
+  return settings[key] || '';
 }
 
 Page({
   data: {
     settings: {},
-    categoryOptions: CATEGORY_OPTIONS,
+    categoryOptions: categoryOptionsFor('all'),
     categoryIndex: 0,
     categoryText: '',
     tempIsCelsius: true,
     tempIsFahrenheit: false,
-    videoSourceIsApple: true,
+    videoSourceIsApple1080: true,
     videoSourceIsLite: false,
+    videoLibraryOptions: VIDEO_LIBRARY_OPTIONS,
+    videoLibraryIsApple: true,
+    videoLibraryIsPremiumFreeAerial: false,
   },
 
   onLoad() {
@@ -28,15 +80,7 @@ Page({
 
   loadSettings() {
     const settings = getSettings();
-    this.setData({
-      settings,
-      categoryIndex: categoryIndexFor(settings.shuffleScope),
-      categoryText: categoryLabel(settings.shuffleScope),
-      tempIsCelsius: settings.tempUnit === 'celsius',
-      tempIsFahrenheit: settings.tempUnit === 'fahrenheit',
-      videoSourceIsApple: settings.videoSource !== 'lite',
-      videoSourceIsLite: settings.videoSource === 'lite',
-    });
+    this.setData(viewDataForSettings(settings));
   },
 
   updateSettings(patch) {
@@ -44,14 +88,29 @@ Page({
       ...this.data.settings,
       ...patch,
     });
-    this.setData({
-      settings: next,
-      categoryIndex: categoryIndexFor(next.shuffleScope),
-      categoryText: categoryLabel(next.shuffleScope),
-      tempIsCelsius: next.tempUnit === 'celsius',
-      tempIsFahrenheit: next.tempUnit === 'fahrenheit',
-      videoSourceIsApple: next.videoSource !== 'lite',
-      videoSourceIsLite: next.videoSource === 'lite',
+    this.setData(viewDataForSettings(next));
+    return next;
+  },
+
+  draftInputPatch(values) {
+    const settings = this.data.settings || {};
+    return {
+      city: String(formValue(values, settings, 'city')).trim() || 'Shanghai',
+      proxyBase: String(formValue(values, settings, 'proxyBase')).trim(),
+      liteVideoBase: String(formValue(values, settings, 'liteVideoBase')).trim(),
+      premiumFreeAerialVideoBase: String(formValue(values, settings, 'premiumFreeAerialVideoBase')).trim(),
+    };
+  },
+
+  saveAndBack(event) {
+    this.updateSettings(this.draftInputPatch(event.detail.value));
+    wx.navigateBack({
+      delta: 1,
+      fail: () => {
+        wx.redirectTo({
+          url: '/pages/index/index',
+        });
+      },
     });
   },
 
@@ -91,10 +150,40 @@ Page({
     });
   },
 
-  onVideoSourceChange(event) {
-    this.updateSettings({
-      videoSource: event.detail.value,
+  onPremiumBaseInput(event) {
+    this.setData({
+      'settings.premiumFreeAerialVideoBase': event.detail.value,
     });
+  },
+
+  onPremiumBaseBlur(event) {
+    this.updateSettings({
+      premiumFreeAerialVideoBase: event.detail.value.trim(),
+    });
+  },
+
+  onVideoSourceChange(event) {
+    const videoSource = event.detail.value;
+    const patch = {
+      videoSource: event.detail.value,
+    };
+    if (videoSource === 'apple1080') {
+      patch.videoLibrary = 'apple';
+      patch.shuffleScope = 'all';
+    }
+    this.updateSettings(patch);
+  },
+
+  onVideoLibraryChange(event) {
+    const videoLibrary = event.detail.value === 'premiumFreeAerial' ? 'premiumFreeAerial' : 'apple';
+    const patch = {
+      videoLibrary,
+      videoSource: 'lite',
+    };
+    if (videoLibrary !== this.data.settings.videoLibrary) {
+      patch.shuffleScope = 'all';
+    }
+    this.updateSettings(patch);
   },
 
   onTempUnitChange(event) {
@@ -105,9 +194,18 @@ Page({
 
   onCategoryChange(event) {
     const index = Number(event.detail.value);
-    const option = CATEGORY_OPTIONS[index] || CATEGORY_OPTIONS[0];
+    const options = categoryOptionsForLibrary(activeVideoLibrary(this.data.settings || {}));
+    const option = options[index] || options[0];
     this.updateSettings({
       shuffleScope: option.value,
+    });
+  },
+
+  onCategoryTap(event) {
+    const options = categoryOptionsForLibrary(activeVideoLibrary(this.data.settings || {}));
+    const value = event.currentTarget.dataset.value || options[0].value;
+    this.updateSettings({
+      shuffleScope: value,
     });
   },
 
@@ -115,27 +213,6 @@ Page({
     const key = event.currentTarget.dataset.key;
     this.updateSettings({
       [key]: event.detail.value,
-    });
-  },
-
-  resetAll() {
-    wx.showModal({
-      title: '重置设置',
-      content: '恢复默认显示和视频来源？',
-      confirmText: '重置',
-      success: (result) => {
-        if (!result.confirm) return;
-        const settings = resetSettings();
-        this.setData({
-          settings,
-          categoryIndex: categoryIndexFor(settings.shuffleScope),
-          categoryText: categoryLabel(settings.shuffleScope),
-          tempIsCelsius: settings.tempUnit === 'celsius',
-          tempIsFahrenheit: settings.tempUnit === 'fahrenheit',
-          videoSourceIsApple: settings.videoSource !== 'lite',
-          videoSourceIsLite: settings.videoSource === 'lite',
-        });
-      },
     });
   },
 });

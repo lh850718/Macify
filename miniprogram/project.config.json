@@ -1,7 +1,20 @@
 {
   "description": "Macify WeChat Mini Program",
   "packOptions": {
-    "ignore": []
+    "ignore": [
+      {
+        "type": "file",
+        "value": ".DS_Store"
+      },
+      {
+        "type": "file",
+        "value": "data/.DS_Store"
+      },
+      {
+        "type": "file",
+        "value": "README.md"
+      }
+    ]
   },
   "setting": {
     "urlCheck": false,

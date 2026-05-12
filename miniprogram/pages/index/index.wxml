@@ -1,20 +1,47 @@
 <view class="screen">
   <image
-    wx:if="{{currentVideo && currentVideo.poster && !videoReady}}"
-    class="poster"
+    wx:if="{{!videoTransitionPoster && !videoReady && currentVideo && currentVideo.poster}}"
+    class="poster loading-poster"
     src="{{currentVideo.poster}}"
     mode="aspectFill"
   />
 
+  <image
+    wx:if="{{videoTransitionPoster}}"
+    class="poster transition-poster {{videoTransitionStage === 'revealing' ? 'transition-poster-revealing' : ''}}"
+    src="{{videoTransitionPoster}}"
+    mode="aspectFill"
+  />
+
   <video
-    wx:if="{{currentVideo && currentVideo.url}}"
-    class="aerial-video"
-    src="{{currentVideo.url}}"
-    poster="{{currentVideo.poster}}"
+    wx:if="{{videoSlotA && videoSlotA.url}}"
+    data-slot="a"
+    class="aerial-video {{activeVideoSlot === 'a' ? 'aerial-video-active' : ''}} {{incomingVideoSlot === 'a' ? 'aerial-video-incoming' : ''}}"
+    src="{{videoSlotA.url}}"
+    poster="{{videoSlotA.poster}}"
     autoplay="{{true}}"
     muted="{{true}}"
     controls="{{false}}"
-    loop="{{false}}"
+    loop="{{true}}"
+    show-center-play-btn="{{false}}"
+    show-play-btn="{{false}}"
+    enable-progress-gesture="{{false}}"
+    object-fit="cover"
+    bindplay="onVideoPlay"
+    bindended="onVideoEnded"
+    binderror="onVideoError"
+  />
+
+  <video
+    wx:if="{{videoSlotB && videoSlotB.url}}"
+    data-slot="b"
+    class="aerial-video {{activeVideoSlot === 'b' ? 'aerial-video-active' : ''}} {{incomingVideoSlot === 'b' ? 'aerial-video-incoming' : ''}}"
+    src="{{videoSlotB.url}}"
+    poster="{{videoSlotB.poster}}"
+    autoplay="{{true}}"
+    muted="{{true}}"
+    controls="{{false}}"
+    loop="{{true}}"
     show-center-play-btn="{{false}}"
     show-play-btn="{{false}}"
     enable-progress-gesture="{{false}}"
@@ -26,32 +53,131 @@
 
   <view class="shade"></view>
 
-  <view class="topbar">
-    <view wx:if="{{settings.showVideoMeta && currentVideo}}" class="meta">
+  <view class="topbar" wx:if="{{!zenActive}}">
+    <view wx:if="{{settings.showVideoMeta && currentVideo}}" class="meta" bindtap="openVideoIntro">
       <text class="meta-title">{{currentVideo.name}}</text>
+      <view class="meta-line"></view>
     </view>
 
-    <view wx:if="{{settings.showWeather && forecast}}" class="weather glass">
+    <view wx:if="{{settings.showWeather && forecast}}" class="weather glass" bindtap="toggleWeather">
       <text class="weather-temp">{{forecast.current.temperature}}°</text>
       <text class="weather-copy">{{weatherLabel}} · {{forecast.location}}</text>
     </view>
   </view>
 
-  <view class="center">
+  <view class="center" wx:if="{{!zenActive}}">
     <view wx:if="{{settings.showClock}}" class="clock-wrap">
       <text class="clock">{{clock}}</text>
       <text class="date">{{dateText}}</text>
     </view>
 
-    <view wx:if="{{settings.showQuote && currentQuote}}" class="quote">
+    <view wx:if="{{settings.showQuote && currentQuote}}" class="quote" bindtap="nextQuote">
       <text class="quote-content">{{currentQuote.content}}</text>
       <text class="quote-author">- {{currentQuote.author}}</text>
     </view>
   </view>
 
-  <view class="bottom-actions">
+  <view class="zen-stage" wx:if="{{zenActive}}">
+    <view class="breath-stage">
+      <view class="breath-rotor">
+        <view class="breath-flower">
+          <view class="breath-petal breath-petal-0"></view>
+          <view class="breath-petal breath-petal-1"></view>
+          <view class="breath-petal breath-petal-2"></view>
+          <view class="breath-petal breath-petal-3"></view>
+          <view class="breath-petal breath-petal-4"></view>
+          <view class="breath-petal breath-petal-5"></view>
+        </view>
+      </view>
+    </view>
+    <view class="zen-label-slot">
+      <text class="zen-label zen-label-inhale">吸气</text>
+      <text class="zen-label zen-label-exhale">呼气</text>
+    </view>
+    <view class="zen-cues">
+      <view
+        class="zen-cue {{settings.zenHaptics ? 'zen-cue-active' : ''}}"
+        bindtap="toggleZenHaptics"
+      >触感</view>
+      <view
+        class="zen-cue {{settings.zenSound ? 'zen-cue-active' : ''}}"
+        bindtap="toggleZenSound"
+      >颂钵音</view>
+    </view>
+    <view class="zen-hint" wx:if="{{zenHintText}}">{{zenHintText}}</view>
+    <view class="zen-exit" bindtap="exitZen">‹</view>
+  </view>
+
+  <view class="zen-entry" wx:if="{{!zenActive}}" bindtap="enterZen" aria-label="冥想">
+    <image class="zen-entry-icon" src="/assets/zazen-line.svg" mode="aspectFit" />
+  </view>
+
+  <view class="bottom-actions" wx:if="{{!zenActive}}">
     <view class="icon-button refresh-button" bindtap="nextVideo">↻</view>
     <view class="icon-button dots-button" bindtap="openSettings">···</view>
+  </view>
+
+  <view class="popover-mask" wx:if="{{weatherVisible}}" bindtap="closeWeather"></view>
+  <view class="weather-popover anchored-popover glass" wx:if="{{weatherVisible}}" style="{{weatherPopoverStyle}}">
+    <view class="popover-header">
+      <view>
+        <text class="popover-title">{{forecast.location}}</text>
+        <text class="popover-subtitle">{{weatherLabel}} · 体感 {{forecast.current.feelsLike}}°</text>
+      </view>
+      <view class="popover-close" bindtap="closeWeather">×</view>
+    </view>
+
+    <view class="weather-now-row">
+      <text class="weather-now-temp">{{forecast.current.temperature}}°</text>
+      <text class="weather-now-unit">{{forecast.unit}}</text>
+    </view>
+
+    <view class="weather-metrics">
+      <view class="weather-metric">
+        <text class="weather-metric-value">{{forecast.current.humidity}}%</text>
+        <text class="weather-metric-label">湿度</text>
+      </view>
+      <view class="weather-metric">
+        <text class="weather-metric-value">{{forecast.current.windSpeed}}</text>
+        <text class="weather-metric-label">km/h 风</text>
+      </view>
+      <view class="weather-metric">
+        <text class="weather-metric-value">{{weatherDaily[0].uvIndexText}}</text>
+        <text class="weather-metric-label">紫外线</text>
+      </view>
+    </view>
+
+    <scroll-view class="daily-scroll" scroll-y="{{true}}">
+      <view class="daily-list">
+        <view class="daily-item" wx:for="{{weatherDaily}}" wx:key="date">
+          <view class="daily-main">
+            <view class="daily-label-wrap">
+              <text class="daily-label">{{item.label}}</text>
+              <text class="daily-date">{{item.dateShort}}</text>
+            </view>
+            <text class="daily-weather">{{item.weatherText}}</text>
+            <text class="daily-temp">{{item.min}}° / {{item.max}}°</text>
+          </view>
+          <text class="daily-extra">降水 {{item.precipitationText}}% · {{item.precipitationSumText}}mm · 风 {{item.windSpeedText}} km/h</text>
+          <text class="daily-extra">紫外线 {{item.uvIndexText}} · 日出 {{item.sunriseText}} · 日落 {{item.sunsetText}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="popover-mask" wx:if="{{videoIntroVisible}}" bindtap="closeVideoIntro"></view>
+  <view class="video-intro-popover anchored-popover glass" wx:if="{{videoIntroVisible}}" style="{{videoIntroPopoverStyle}}">
+    <view class="popover-header">
+      <view>
+        <text class="popover-title">{{currentVideo.name}}</text>
+      </view>
+      <view class="popover-close" bindtap="closeVideoIntro">×</view>
+    </view>
+    <text class="video-intro-copy">{{currentVideoIntro || '暂无介绍'}}</text>
+    <view class="favorite-action" catchtap="toggleFavorite">
+      <text class="favorite-heart {{currentVideoFavorited ? 'favorite-heart-active' : ''}}">{{currentVideoFavorited ? '♥' : '♡'}}</text>
+      <text class="favorite-label">{{currentVideoFavorited ? '已收藏' : '收藏视频'}}</text>
+    </view>
   </view>
 
   <view wx:if="{{videoError}}" class="toast glass">{{videoError}}</view>

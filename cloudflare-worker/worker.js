@@ -6,7 +6,8 @@
 // at the edge — so the worker just does "sanitize + forward":
 //
 //   1. Method must be one of GET / HEAD / OPTIONS.
-//   2. Path must start with /itunes-assets/ (Apple's aerial asset prefix).
+//   2. Path must start with /itunes-assets/ or /Videos/ (Apple's aerial
+//      asset prefixes; the latter hosts the legacy 1080 H264 feed).
 //      Worker can't be turned into an open Apple proxy for arbitrary paths.
 //   3. Request headers are scrubbed — only media-relevant ones forwarded.
 //      Authorization / Cookie / X-* never reach Apple.
@@ -17,7 +18,7 @@
 // firewall's job, by design. Keep the policy in one place.
 
 const APPLE_HOST = 'https://sylvan.apple.com';
-const ALLOWED_PATH_PREFIX = '/itunes-assets/';
+const ALLOWED_PATH_PREFIXES = ['/itunes-assets/', '/Videos/'];
 const ALLOWED_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 const FORWARDED_REQUEST_HEADERS = new Set([
@@ -79,7 +80,7 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    if (!url.pathname.startsWith(ALLOWED_PATH_PREFIX)) {
+    if (!ALLOWED_PATH_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))) {
       return deny(404, 'Not found');
     }
 

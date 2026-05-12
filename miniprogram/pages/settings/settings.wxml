@@ -1,106 +1,144 @@
 <view class="settings-page">
-  <view class="header">
-    <text class="title">Macify</text>
-    <text class="subtitle">微信小程序版</text>
-  </view>
-
-  <view class="section">
-    <view class="section-title">显示</view>
-    <view class="row">
-      <text class="label">时间</text>
-      <switch checked="{{settings.showClock}}" data-key="showClock" bindchange="onSwitchChange" color="#47c7a2" />
-    </view>
-    <view class="row">
-      <text class="label">天气</text>
-      <switch checked="{{settings.showWeather}}" data-key="showWeather" bindchange="onSwitchChange" color="#47c7a2" />
-    </view>
-    <view class="row">
-      <text class="label">语录</text>
-      <switch checked="{{settings.showQuote}}" data-key="showQuote" bindchange="onSwitchChange" color="#47c7a2" />
-    </view>
-    <view class="row">
-      <text class="label">视频信息</text>
-      <switch checked="{{settings.showVideoMeta}}" data-key="showVideoMeta" bindchange="onSwitchChange" color="#47c7a2" />
-    </view>
-  </view>
-
-  <view class="section">
-    <view class="section-title">天气</view>
-    <view class="field">
-      <text class="label">城市</text>
-      <input
-        class="input"
-        value="{{settings.city}}"
-        placeholder="Shanghai"
-        bindinput="onCityInput"
-        bindblur="onCityBlur"
-      />
-    </view>
-    <radio-group class="radio-row" bindchange="onTempUnitChange">
-      <label class="radio-item">
-        <radio value="celsius" checked="{{tempIsCelsius}}" color="#47c7a2" />
-        <text>摄氏度</text>
-      </label>
-      <label class="radio-item">
-        <radio value="fahrenheit" checked="{{tempIsFahrenheit}}" color="#47c7a2" />
-        <text>华氏度</text>
-      </label>
-    </radio-group>
-  </view>
-
-  <view class="section">
-    <view class="section-title">视频</view>
-    <radio-group class="radio-row" bindchange="onVideoSourceChange">
-      <label class="radio-item">
-        <radio value="apple" checked="{{videoSourceIsApple}}" color="#47c7a2" />
-        <text>Apple 原始视频</text>
-      </label>
-      <label class="radio-item">
-        <radio value="lite" checked="{{videoSourceIsLite}}" color="#47c7a2" />
-        <text>轻量 CDN</text>
-      </label>
-    </radio-group>
-
-    <view class="field">
-      <text class="label">轻量 CDN 域名</text>
-      <input
-        class="input"
-        value="{{settings.liteVideoBase}}"
-        placeholder="https://your-cdn.example.com"
-        bindinput="onLiteBaseInput"
-        bindblur="onLiteBaseBlur"
-      />
+  <form bindsubmit="saveAndBack">
+    <view class="header">
+      <text class="title">Macify</text>
+      <text class="subtitle">微信小程序版</text>
     </view>
 
-    <picker
-      mode="selector"
-      range="{{categoryOptions}}"
-      range-key="label"
-      value="{{categoryIndex}}"
-      bindchange="onCategoryChange"
-    >
-      <view class="row picker-row">
-        <text class="label">播放范围</text>
-        <text class="value">{{categoryText}}</text>
+    <view class="section">
+      <view class="section-title">显示</view>
+      <view class="row">
+        <text class="label">时间</text>
+        <switch checked="{{settings.showClock}}" data-key="showClock" bindchange="onSwitchChange" color="#47c7a2" />
       </view>
-    </picker>
-
-    <view class="row">
-      <text class="label">反向代理</text>
-      <switch checked="{{settings.reverseProxy}}" data-key="reverseProxy" bindchange="onSwitchChange" color="#47c7a2" />
+      <view class="row">
+        <text class="label">天气</text>
+        <switch checked="{{settings.showWeather}}" data-key="showWeather" bindchange="onSwitchChange" color="#47c7a2" />
+      </view>
+      <view class="row">
+        <text class="label">语录</text>
+        <switch checked="{{settings.showQuote}}" data-key="showQuote" bindchange="onSwitchChange" color="#47c7a2" />
+      </view>
+      <view class="row">
+        <text class="label">视频信息</text>
+        <switch checked="{{settings.showVideoMeta}}" data-key="showVideoMeta" bindchange="onSwitchChange" color="#47c7a2" />
+      </view>
+      <view class="row stacked-row">
+        <view>
+          <text class="label">保留呼吸页设置</text>
+          <text class="hint">可能会导致重新进入小程序时响起颂钵音</text>
+        </view>
+        <switch checked="{{settings.rememberZenCues}}" data-key="rememberZenCues" bindchange="onSwitchChange" color="#47c7a2" />
+      </view>
     </view>
 
-    <view class="field">
-      <text class="label">代理域名</text>
-      <input
-        class="input"
-        value="{{settings.proxyBase}}"
-        placeholder="https://your-host.example.com"
-        bindinput="onProxyInput"
-        bindblur="onProxyBlur"
-      />
+    <view class="section">
+      <view class="section-title">天气</view>
+      <view class="field">
+        <text class="label">城市</text>
+        <input
+          class="input"
+          name="city"
+          value="{{settings.city}}"
+          placeholder="Shanghai"
+          bindinput="onCityInput"
+          bindblur="onCityBlur"
+        />
+      </view>
+      <radio-group class="radio-row" bindchange="onTempUnitChange">
+        <label class="radio-item">
+          <radio value="celsius" checked="{{tempIsCelsius}}" color="#47c7a2" />
+          <text>摄氏度</text>
+        </label>
+        <label class="radio-item">
+          <radio value="fahrenheit" checked="{{tempIsFahrenheit}}" color="#47c7a2" />
+          <text>华氏度</text>
+        </label>
+      </radio-group>
     </view>
-  </view>
 
-  <button class="reset-button" bindtap="resetAll">恢复默认</button>
+    <view class="section">
+      <view class="section-title">视频</view>
+      <radio-group class="radio-row video-source-row" bindchange="onVideoSourceChange">
+        <label class="radio-item">
+          <radio value="apple1080" checked="{{videoSourceIsApple1080}}" color="#47c7a2" />
+          <text>内置 1080P视频</text>
+        </label>
+        <label class="radio-item">
+          <radio value="lite" checked="{{videoSourceIsLite}}" color="#47c7a2" />
+          <text>轻量 MP4</text>
+        </label>
+      </radio-group>
+
+      <view class="library-field" wx:if="{{videoSourceIsLite}}">
+        <text class="label">素材源</text>
+        <radio-group class="radio-row video-library-row" bindchange="onVideoLibraryChange">
+          <label class="radio-item" wx:for="{{videoLibraryOptions}}" wx:key="value">
+            <radio value="{{item.value}}" checked="{{item.selected}}" color="#47c7a2" />
+            <text>{{item.label}}</text>
+          </label>
+        </radio-group>
+      </view>
+
+      <view class="field" wx:if="{{videoSourceIsLite && videoLibraryIsApple}}">
+        <text class="label">Apple 轻量 MP4 根域名</text>
+        <input
+          class="input"
+          name="liteVideoBase"
+          value="{{settings.liteVideoBase}}"
+          placeholder="https://your-cdn.example.com"
+          bindinput="onLiteBaseInput"
+          bindblur="onLiteBaseBlur"
+        />
+        <text class="hint">默认使用腾讯云 COS 的 macify/videos/ 前缀，按 /videos/视频ID.mp4 读取</text>
+      </view>
+
+      <view class="field" wx:if="{{videoSourceIsLite && videoLibraryIsPremiumFreeAerial}}">
+        <text class="label">高端免费航拍 MP4 根域名</text>
+        <input
+          class="input"
+          name="premiumFreeAerialVideoBase"
+          value="{{settings.premiumFreeAerialVideoBase}}"
+          placeholder="https://your-cdn.example.com/macify-premium"
+          bindinput="onPremiumBaseInput"
+          bindblur="onPremiumBaseBlur"
+        />
+        <text class="hint">使用独立 COS 前缀 macify-premium/videos/，不会覆盖 Apple 视频</text>
+      </view>
+
+      <view class="scope-field">
+        <text class="label">播放范围</text>
+        <view class="scope-grid">
+          <view
+            class="scope-chip {{item.selected ? 'scope-chip-active' : ''}}"
+            wx:for="{{categoryOptions}}"
+            wx:key="value"
+            data-value="{{item.value}}"
+            bindtap="onCategoryTap"
+          >{{item.label}}</view>
+        </view>
+      </view>
+
+      <view class="row" wx:if="{{videoSourceIsApple1080}}">
+        <text class="label">反向代理</text>
+        <switch checked="{{settings.reverseProxy}}" data-key="reverseProxy" bindchange="onSwitchChange" color="#47c7a2" />
+      </view>
+
+      <view class="field" wx:if="{{videoSourceIsApple1080 && settings.reverseProxy}}">
+        <text class="label">代理根域名</text>
+        <input
+          class="input"
+          name="proxyBase"
+          value="{{settings.proxyBase}}"
+          placeholder="https://your-host.example.com"
+          bindinput="onProxyInput"
+          bindblur="onProxyBlur"
+        />
+      </view>
+    </view>
+
+    <view class="settings-actions">
+      <button class="save-button" form-type="submit">保存并返回</button>
+    </view>
+  </form>
 </view>

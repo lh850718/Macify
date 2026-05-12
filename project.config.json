@@ -21,7 +21,20 @@
   "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "file",
+        "value": "miniprogram/.DS_Store"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/data/.DS_Store"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/README.md"
+      }
+    ],
     "include": []
   },
   "appid": "wx8566982d6a0e0ded",

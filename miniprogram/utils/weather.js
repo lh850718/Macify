@@ -75,7 +75,11 @@ function parseDaily(data) {
     max: roundOrNull(arrayItem(daily.temperature_2m_max, index)),
     min: roundOrNull(arrayItem(daily.temperature_2m_min, index)),
     precipitation: roundOrNull(arrayItem(daily.precipitation_probability_max, index)),
+    precipitationSum: roundOrNull(arrayItem(daily.precipitation_sum, index)),
     windSpeed: roundOrNull(arrayItem(daily.wind_speed_10m_max, index)),
+    uvIndex: roundOrNull(arrayItem(daily.uv_index_max, index)),
+    sunrise: arrayItem(daily.sunrise, index),
+    sunset: arrayItem(daily.sunset, index),
   }));
 }
 
@@ -83,17 +87,22 @@ async function fetchForecast(geo, tempUnit) {
   const query = buildQuery({
     latitude: geo.lat,
     longitude: geo.lng,
-    current: 'temperature_2m,apparent_temperature,weather_code',
+    current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m',
     daily: [
       'weather_code',
       'temperature_2m_max',
       'temperature_2m_min',
       'precipitation_probability_max',
+      'precipitation_sum',
       'wind_speed_10m_max',
+      'uv_index_max',
+      'sunrise',
+      'sunset',
     ].join(','),
-    forecast_days: 3,
+    forecast_days: 7,
     temperature_unit: tempUnit === 'fahrenheit' ? 'fahrenheit' : 'celsius',
     wind_speed_unit: 'kmh',
+    precipitation_unit: 'mm',
     timezone: 'auto',
   });
   return requestJson(`${FORECAST_URL}?${query}`);
@@ -118,7 +127,9 @@ async function getForecast(options) {
     current: {
       temperature: roundOrNull(current.temperature_2m),
       feelsLike: roundOrNull(current.apparent_temperature),
+      humidity: roundOrNull(current.relative_humidity_2m),
       weatherCode: current.weather_code,
+      windSpeed: roundOrNull(current.wind_speed_10m),
     },
     daily: parseDaily(data),
   };

@@ -21,8 +21,14 @@ AGENTS.md
 .env.local
 .env.*.local
 project.private.config.json
+.cos.yaml
+coscli_output/
 
 macify-music
 sketch
 introduce.mov
+local-miniprogram-audio/
+local-miniprogram-lite/
+local-miniprogram-1080/
+local-miniprogram-premium-aerial/
 __pycache__

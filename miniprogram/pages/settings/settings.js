@@ -1,16 +1,9 @@
 const { getSettings, saveSettings } = require('../../utils/storage.js');
 const {
-  VIDEO_LIBRARY_OPTIONS,
   activeVideoLibrary,
   categoryLabel,
   categoryOptionsForLibrary,
 } = require('../../utils/videos.js');
-
-function storedVideoLibrary(settings) {
-  return settings.videoLibrary === 'premiumFreeAerial'
-    ? 'premiumFreeAerial'
-    : 'apple';
-}
 
 function categoryIndexFor(value, library) {
   const options = categoryOptionsForLibrary(library);
@@ -29,7 +22,6 @@ function categoryOptionsFor(value, library) {
 
 function viewDataForSettings(settings) {
   const library = activeVideoLibrary(settings);
-  const storedLibrary = storedVideoLibrary(settings);
   return {
     settings,
     categoryOptions: categoryOptionsFor(settings.shuffleScope, library),
@@ -37,22 +29,7 @@ function viewDataForSettings(settings) {
     categoryText: categoryLabel(settings.shuffleScope, library),
     tempIsCelsius: settings.tempUnit === 'celsius',
     tempIsFahrenheit: settings.tempUnit === 'fahrenheit',
-    videoSourceIsApple1080: settings.videoSource === 'apple1080',
-    videoSourceIsLite: settings.videoSource === 'lite',
-    videoLibraryOptions: VIDEO_LIBRARY_OPTIONS.map((item) => ({
-      ...item,
-      selected: item.value === storedLibrary,
-    })),
-    videoLibraryIsApple: storedLibrary === 'apple',
-    videoLibraryIsPremiumFreeAerial: storedLibrary === 'premiumFreeAerial',
   };
-}
-
-function formValue(values, settings, key) {
-  if (values && Object.prototype.hasOwnProperty.call(values, key)) {
-    return values[key];
-  }
-  return settings[key] || '';
 }
 
 Page({
@@ -63,11 +40,6 @@ Page({
     categoryText: '',
     tempIsCelsius: true,
     tempIsFahrenheit: false,
-    videoSourceIsApple1080: true,
-    videoSourceIsLite: false,
-    videoLibraryOptions: VIDEO_LIBRARY_OPTIONS,
-    videoLibraryIsApple: true,
-    videoLibraryIsPremiumFreeAerial: false,
   },
 
   onLoad() {
@@ -76,6 +48,14 @@ Page({
 
   onShow() {
     this.loadSettings();
+  },
+
+  onHide() {
+    this.persistDraftSettings();
+  },
+
+  onUnload() {
+    this.persistDraftSettings();
   },
 
   loadSettings() {
@@ -92,25 +72,12 @@ Page({
     return next;
   },
 
-  draftInputPatch(values) {
+  persistDraftSettings() {
     const settings = this.data.settings || {};
-    return {
-      city: String(formValue(values, settings, 'city')).trim() || 'Shanghai',
-      proxyBase: String(formValue(values, settings, 'proxyBase')).trim(),
-      liteVideoBase: String(formValue(values, settings, 'liteVideoBase')).trim(),
-      premiumFreeAerialVideoBase: String(formValue(values, settings, 'premiumFreeAerialVideoBase')).trim(),
-    };
-  },
-
-  saveAndBack(event) {
-    this.updateSettings(this.draftInputPatch(event.detail.value));
-    wx.navigateBack({
-      delta: 1,
-      fail: () => {
-        wx.redirectTo({
-          url: '/pages/index/index',
-        });
-      },
+    if (!settings || !Object.keys(settings).length) return;
+    saveSettings({
+      ...settings,
+      city: String(settings.city || '').trim() || 'Shanghai',
     });
   },
 
@@ -124,66 +91,6 @@ Page({
     this.updateSettings({
       city: event.detail.value.trim() || 'Shanghai',
     });
-  },
-
-  onProxyInput(event) {
-    this.setData({
-      'settings.proxyBase': event.detail.value,
-    });
-  },
-
-  onProxyBlur(event) {
-    this.updateSettings({
-      proxyBase: event.detail.value.trim(),
-    });
-  },
-
-  onLiteBaseInput(event) {
-    this.setData({
-      'settings.liteVideoBase': event.detail.value,
-    });
-  },
-
-  onLiteBaseBlur(event) {
-    this.updateSettings({
-      liteVideoBase: event.detail.value.trim(),
-    });
-  },
-
-  onPremiumBaseInput(event) {
-    this.setData({
-      'settings.premiumFreeAerialVideoBase': event.detail.value,
-    });
-  },
-
-  onPremiumBaseBlur(event) {
-    this.updateSettings({
-      premiumFreeAerialVideoBase: event.detail.value.trim(),
-    });
-  },
-
-  onVideoSourceChange(event) {
-    const videoSource = event.detail.value;
-    const patch = {
-      videoSource: event.detail.value,
-    };
-    if (videoSource === 'apple1080') {
-      patch.videoLibrary = 'apple';
-      patch.shuffleScope = 'all';
-    }
-    this.updateSettings(patch);
-  },
-
-  onVideoLibraryChange(event) {
-    const videoLibrary = event.detail.value === 'premiumFreeAerial' ? 'premiumFreeAerial' : 'apple';
-    const patch = {
-      videoLibrary,
-      videoSource: 'lite',
-    };
-    if (videoLibrary !== this.data.settings.videoLibrary) {
-      patch.shuffleScope = 'all';
-    }
-    this.updateSettings(patch);
   },
 
   onTempUnitChange(event) {
@@ -213,6 +120,12 @@ Page({
     const key = event.currentTarget.dataset.key;
     this.updateSettings({
       [key]: event.detail.value,
+    });
+  },
+
+  openLicenses() {
+    wx.navigateTo({
+      url: '/pages/licenses/licenses',
     });
   },
 });

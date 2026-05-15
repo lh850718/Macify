@@ -13,6 +13,8 @@ const BREATH_HAPTIC_BASE_MS = 5000;
 const BREATH_SCALE_MIN = 0.45;
 const BREATH_SCALE_MAX = 1.2;
 const BREATH_HOLD_OPACITY = 0.76;
+const BREATH_COMPLETION_MS = 3000;
+const BREATH_ENTRY_MS = 760;
 const BREATH_PHASE_LABELS = Object.freeze({
   inhale: '吸气',
   holdAfterInhale: '屏息',
@@ -280,7 +282,9 @@ Page({
     zenPracticeText: '',
     zenCountdownText: '',
     zenFlowerVisible: true,
+    zenFlowerEntering: false,
     zenFlowerBursting: false,
+    zenPhaseEntering: false,
     breathFlowerAnimation: null,
     videoError: '',
   },
@@ -963,7 +967,9 @@ Page({
       zenPracticeText: customBreathIntroText(rhythm),
       zenCountdownText: '3',
       zenFlowerVisible: false,
+      zenFlowerEntering: false,
       zenFlowerBursting: false,
+      zenPhaseEntering: false,
     });
     this.startCustomBreathCountdown();
   },
@@ -978,7 +984,9 @@ Page({
       zenBreathMode: 'default',
       zenPhaseText: '',
       zenCountdownText: '',
+      zenFlowerEntering: false,
       zenFlowerBursting: true,
+      zenPhaseEntering: false,
       zenPracticeText: '本次练习完成，恢复默认呼吸',
     });
     this.playBubblePopHaptic();
@@ -988,16 +996,27 @@ Page({
       this.zenCustomTargetCycles = 0;
       this.setData({
         zenBreathMode: 'default',
-        zenFlowerVisible: true,
+        zenFlowerVisible: false,
         zenFlowerBursting: false,
       });
       this.resetBreathPose(() => {
-        this.startZenPhase('inhale');
+        this.setData({
+          zenPracticeText: '',
+          zenFlowerVisible: true,
+          zenFlowerEntering: true,
+          zenPhaseText: '吸气',
+          zenPhaseEntering: true,
+        }, () => {
+          this.zenPhaseTimer = setTimeout(() => {
+            this.setData({
+              zenFlowerEntering: false,
+              zenPhaseEntering: false,
+            }, () => {
+              this.startZenPhase('inhale');
+            });
+          }, BREATH_ENTRY_MS);
+        });
       });
-      this.zenPracticeTimer = setTimeout(() => {
-        this.setData({ zenPracticeText: '' });
-        this.zenPracticeTimer = null;
-      }, 3200);
     });
   },
 
@@ -1029,11 +1048,23 @@ Page({
         this.zenCustomIntroActive = false;
         this.setData({
           zenCountdownText: '',
-          zenFlowerVisible: true,
         });
-        this.updateCustomBreathProgressText();
         this.resetBreathPose(() => {
-          this.startZenPhase('inhale');
+          this.setData({
+            zenFlowerVisible: true,
+            zenFlowerEntering: true,
+            zenPhaseText: '吸气',
+            zenPhaseEntering: true,
+          }, () => {
+            this.zenPhaseTimer = setTimeout(() => {
+              this.setData({
+                zenFlowerEntering: false,
+                zenPhaseEntering: false,
+              }, () => {
+                this.startZenPhase('inhale');
+              });
+            }, BREATH_ENTRY_MS);
+          });
         });
       }, 3000),
     ];
@@ -1054,7 +1085,9 @@ Page({
       zenPracticeText: '',
       zenCountdownText: '',
       zenFlowerVisible: true,
+      zenFlowerEntering: false,
       zenFlowerBursting: false,
+      zenPhaseEntering: false,
     });
     this.resetBreathPose(() => {
       this.startZenPhase('inhale');
@@ -1075,7 +1108,9 @@ Page({
       zenPracticeText: '',
       zenCountdownText: '',
       zenFlowerVisible: true,
+      zenFlowerEntering: false,
       zenFlowerBursting: false,
+      zenPhaseEntering: false,
     });
     this.stopZenAudio();
     this.zenPhase = null;
@@ -1218,16 +1253,16 @@ Page({
       return;
     }
     const animation = wx.createAnimation({
-      duration: 760,
+      duration: BREATH_COMPLETION_MS,
       timingFunction: 'ease-out',
     });
-    animation.scale(1.9).rotate(24).opacity(0).step();
+    animation.scale(2.15).rotate(18).opacity(0).step();
     this.setData({
       breathFlowerAnimation: animation.export(),
     });
     this.zenPhaseTimer = setTimeout(() => {
       if (callback) callback();
-    }, 820);
+    }, BREATH_COMPLETION_MS + 80);
   },
 
   startZenPhase(phase) {

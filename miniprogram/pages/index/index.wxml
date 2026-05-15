@@ -93,7 +93,7 @@
   <view class="zen-stage" wx:if="{{zenActive && !videoOnlyActive}}">
     <view class="breath-stage">
       <view class="breath-countdown" wx:if="{{zenCountdownText}}">{{zenCountdownText}}</view>
-      <view class="breath-rotor" wx:if="{{zenFlowerVisible}}">
+      <view class="breath-rotor {{zenFlowerEntering ? 'breath-rotor-entering' : ''}}" wx:if="{{zenFlowerVisible}}">
         <view class="breath-flower breath-flower-manual {{zenFlowerBursting ? 'breath-flower-bursting' : ''}}" animation="{{breathFlowerAnimation}}">
           <view class="breath-petal breath-petal-0"></view>
           <view class="breath-petal breath-petal-1"></view>
@@ -105,7 +105,7 @@
       </view>
     </view>
     <view class="zen-label-slot">
-      <text class="zen-label zen-label-dynamic">{{zenPhaseText}}</text>
+      <text class="zen-label zen-label-dynamic {{zenPhaseEntering ? 'zen-label-entering' : ''}}">{{zenPhaseText}}</text>
     </view>
     <view class="zen-practice-note" wx:if="{{zenPracticeText}}">{{zenPracticeText}}</view>
     <view class="zen-cues">

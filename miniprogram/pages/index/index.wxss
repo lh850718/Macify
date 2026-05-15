@@ -224,19 +224,18 @@
   position: fixed;
   inset: 0;
   z-index: 6;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   color: #fff;
   text-align: center;
   pointer-events: none;
 }
 
 .breath-stage {
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: 360rpx;
   height: 360rpx;
+  transform: translate(-50%, -50%);
 }
 
 .breath-countdown {
@@ -259,6 +258,13 @@
   inset: 0;
   transform-origin: center;
   animation: breathSpin 36s linear infinite;
+}
+
+.breath-rotor-entering {
+  opacity: 0;
+  animation:
+    breathSpin 36s linear infinite,
+    breathStageFadeIn 760ms ease-out forwards;
 }
 
 .breath-flower {
@@ -319,34 +325,35 @@
 }
 
 .breath-flower-bursting .breath-petal-0 {
-  animation: breathPetalBurst0 760ms ease-out forwards;
+  animation: breathPetalBurst0 3000ms ease-out forwards;
 }
 
 .breath-flower-bursting .breath-petal-1 {
-  animation: breathPetalBurst1 760ms ease-out forwards;
+  animation: breathPetalBurst1 3000ms ease-out forwards;
 }
 
 .breath-flower-bursting .breath-petal-2 {
-  animation: breathPetalBurst2 760ms ease-out forwards;
+  animation: breathPetalBurst2 3000ms ease-out forwards;
 }
 
 .breath-flower-bursting .breath-petal-3 {
-  animation: breathPetalBurst3 760ms ease-out forwards;
+  animation: breathPetalBurst3 3000ms ease-out forwards;
 }
 
 .breath-flower-bursting .breath-petal-4 {
-  animation: breathPetalBurst4 760ms ease-out forwards;
+  animation: breathPetalBurst4 3000ms ease-out forwards;
 }
 
 .breath-flower-bursting .breath-petal-5 {
-  animation: breathPetalBurst5 760ms ease-out forwards;
+  animation: breathPetalBurst5 3000ms ease-out forwards;
 }
 
 .zen-label-slot {
-  position: relative;
+  position: absolute;
+  left: 0;
+  top: calc(50% + 208rpx);
   width: 100%;
   height: 56rpx;
-  margin-top: 28rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -376,6 +383,10 @@
   transform: translateY(0);
 }
 
+.zen-label-entering {
+  animation: zenLabelFadeIn 760ms ease-out both;
+}
+
 .zen-cues {
   position: fixed;
   left: 50%;
@@ -390,9 +401,12 @@
 }
 
 .zen-practice-note {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 274rpx);
   width: 610rpx;
-  min-height: 64rpx;
-  margin-top: 4rpx;
+  min-height: 118rpx;
+  transform: translateX(-50%);
   color: rgba(255, 255, 255, 0.56);
   font-size: 26rpx;
   font-weight: 360;
@@ -496,45 +510,67 @@
   }
 }
 
+@keyframes breathStageFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes breathPetalBurst0 {
   to {
     opacity: 0;
-    transform: translate(-50%, -50%) rotate(0deg) translateY(-86%) scale(0.54);
+    transform: translate(-50%, -50%) rotate(0deg) translateY(-112%) scale(0.42);
   }
 }
 
 @keyframes breathPetalBurst1 {
   to {
     opacity: 0;
-    transform: translate(-50%, -50%) rotate(60deg) translateY(-86%) scale(0.54);
+    transform: translate(-50%, -50%) rotate(60deg) translateY(-112%) scale(0.42);
   }
 }
 
 @keyframes breathPetalBurst2 {
   to {
     opacity: 0;
-    transform: translate(-50%, -50%) rotate(120deg) translateY(-86%) scale(0.54);
+    transform: translate(-50%, -50%) rotate(120deg) translateY(-112%) scale(0.42);
   }
 }
 
 @keyframes breathPetalBurst3 {
   to {
     opacity: 0;
-    transform: translate(-50%, -50%) rotate(180deg) translateY(-86%) scale(0.54);
+    transform: translate(-50%, -50%) rotate(180deg) translateY(-112%) scale(0.42);
   }
 }
 
 @keyframes breathPetalBurst4 {
   to {
     opacity: 0;
-    transform: translate(-50%, -50%) rotate(240deg) translateY(-86%) scale(0.54);
+    transform: translate(-50%, -50%) rotate(240deg) translateY(-112%) scale(0.42);
   }
 }
 
 @keyframes breathPetalBurst5 {
   to {
     opacity: 0;
-    transform: translate(-50%, -50%) rotate(300deg) translateY(-86%) scale(0.54);
+    transform: translate(-50%, -50%) rotate(300deg) translateY(-112%) scale(0.42);
+  }
+}
+
+@keyframes zenLabelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

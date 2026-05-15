@@ -239,6 +239,21 @@
   height: 360rpx;
 }
 
+.breath-countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 142rpx;
+  font-weight: 220;
+  line-height: 1;
+  text-shadow: 0 8rpx 34rpx rgba(0, 0, 0, 0.56);
+  animation: breathCountdownPulse 980ms ease-in-out infinite;
+}
+
 .breath-rotor {
   position: absolute;
   inset: 0;
@@ -251,7 +266,13 @@
   inset: 0;
   transform-origin: center;
   animation: breathCoherent 10s infinite;
+  transform: scale(0.45);
+  opacity: 1;
   will-change: transform;
+}
+
+.breath-flower-manual {
+  animation: none;
 }
 
 .breath-petal {
@@ -297,6 +318,30 @@
   transform: translate(-50%, -50%) rotate(300deg) translateY(-26%);
 }
 
+.breath-flower-bursting .breath-petal-0 {
+  animation: breathPetalBurst0 760ms ease-out forwards;
+}
+
+.breath-flower-bursting .breath-petal-1 {
+  animation: breathPetalBurst1 760ms ease-out forwards;
+}
+
+.breath-flower-bursting .breath-petal-2 {
+  animation: breathPetalBurst2 760ms ease-out forwards;
+}
+
+.breath-flower-bursting .breath-petal-3 {
+  animation: breathPetalBurst3 760ms ease-out forwards;
+}
+
+.breath-flower-bursting .breath-petal-4 {
+  animation: breathPetalBurst4 760ms ease-out forwards;
+}
+
+.breath-flower-bursting .breath-petal-5 {
+  animation: breathPetalBurst5 760ms ease-out forwards;
+}
+
 .zen-label-slot {
   position: relative;
   width: 100%;
@@ -326,6 +371,11 @@
   animation: zenLabelExhale 10s linear infinite;
 }
 
+.zen-label-dynamic {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .zen-cues {
   position: fixed;
   left: 50%;
@@ -335,8 +385,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 34rpx;
+  gap: 28rpx;
   pointer-events: auto;
+}
+
+.zen-practice-note {
+  width: 610rpx;
+  min-height: 64rpx;
+  margin-top: 4rpx;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 26rpx;
+  font-weight: 360;
+  line-height: 1.5;
+  text-align: center;
+  text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.56);
+  white-space: pre-line;
+  pointer-events: none;
 }
 
 .zen-cue {
@@ -411,6 +475,66 @@
 
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes breathCountdownPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+
+  34%,
+  72% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes breathPetalBurst0 {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) translateY(-86%) scale(0.54);
+  }
+}
+
+@keyframes breathPetalBurst1 {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(60deg) translateY(-86%) scale(0.54);
+  }
+}
+
+@keyframes breathPetalBurst2 {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(120deg) translateY(-86%) scale(0.54);
+  }
+}
+
+@keyframes breathPetalBurst3 {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(180deg) translateY(-86%) scale(0.54);
+  }
+}
+
+@keyframes breathPetalBurst4 {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(240deg) translateY(-86%) scale(0.54);
+  }
+}
+
+@keyframes breathPetalBurst5 {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(300deg) translateY(-86%) scale(0.54);
   }
 }
 

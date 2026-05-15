@@ -81,6 +81,27 @@ Page({
     });
   },
 
+  onBreathRhythmInput(event) {
+    const rhythm = event.currentTarget.dataset.rhythm;
+    const field = event.currentTarget.dataset.field;
+    if (!rhythm || !field) return;
+    this.setData({
+      [`settings.${rhythm}.${field}`]: event.detail.value,
+    });
+  },
+
+  onBreathRhythmBlur(event) {
+    const rhythm = event.currentTarget.dataset.rhythm;
+    const field = event.currentTarget.dataset.field;
+    if (!rhythm || !field) return;
+    this.updateSettings({
+      [rhythm]: {
+        ...(this.data.settings[rhythm] || {}),
+        [field]: event.detail.value,
+      },
+    });
+  },
+
   onCityInput(event) {
     this.setData({
       'settings.city': event.detail.value,

@@ -43,6 +43,132 @@
 
   <view class="section">
     <view class="section-head">
+      <text class="section-title">呼吸节奏</text>
+    </view>
+
+    <view class="breath-rhythm-block">
+      <text class="label">默认呼吸</text>
+      <view class="rhythm-formula rhythm-default-formula">
+        <text class="rhythm-label-cell rhythm-cell-1">吸气</text>
+        <text class="rhythm-label-cell rhythm-cell-3">屏息</text>
+        <text class="rhythm-label-cell rhythm-cell-5">呼气</text>
+        <text class="rhythm-label-cell rhythm-cell-7">屏息</text>
+        <input
+          class="rhythm-compact-input rhythm-cell-1 rhythm-input-line"
+          type="number"
+          maxlength="2"
+          value="{{settings.defaultBreathRhythm.inhale}}"
+          data-rhythm="defaultBreathRhythm"
+          data-field="inhale"
+          bindinput="onBreathRhythmInput"
+          bindblur="onBreathRhythmBlur"
+        />
+        <text class="rhythm-separator rhythm-cell-2 rhythm-input-line">→</text>
+        <input
+          class="rhythm-compact-input rhythm-cell-3 rhythm-input-line"
+          type="number"
+          maxlength="2"
+          value="{{settings.defaultBreathRhythm.holdAfterInhale}}"
+          data-rhythm="defaultBreathRhythm"
+          data-field="holdAfterInhale"
+          bindinput="onBreathRhythmInput"
+          bindblur="onBreathRhythmBlur"
+        />
+        <text class="rhythm-separator rhythm-cell-4 rhythm-input-line">→</text>
+        <input
+          class="rhythm-compact-input rhythm-cell-5 rhythm-input-line"
+          type="number"
+          maxlength="2"
+          value="{{settings.defaultBreathRhythm.exhale}}"
+          data-rhythm="defaultBreathRhythm"
+          data-field="exhale"
+          bindinput="onBreathRhythmInput"
+          bindblur="onBreathRhythmBlur"
+        />
+        <text class="rhythm-separator rhythm-cell-6 rhythm-input-line">→</text>
+        <input
+          class="rhythm-compact-input rhythm-cell-7 rhythm-input-line"
+          type="number"
+          maxlength="2"
+          value="{{settings.defaultBreathRhythm.holdAfterExhale}}"
+          data-rhythm="defaultBreathRhythm"
+          data-field="holdAfterExhale"
+          bindinput="onBreathRhythmInput"
+          bindblur="onBreathRhythmBlur"
+        />
+        <text class="rhythm-unit-tail rhythm-cell-8 rhythm-input-line">秒</text>
+      </view>
+    </view>
+
+    <view class="breath-rhythm-block">
+      <text class="label">自定义练习</text>
+      <view class="rhythm-formula rhythm-custom-formula">
+        <text class="rhythm-label-cell rhythm-cell-1">吸气</text>
+        <text class="rhythm-label-cell rhythm-cell-3">屏息</text>
+        <text class="rhythm-label-cell rhythm-cell-5">呼气</text>
+        <text class="rhythm-label-cell rhythm-cell-7">屏息</text>
+        <text class="rhythm-label-cell rhythm-cell-9">组数</text>
+        <input
+          class="rhythm-compact-input rhythm-cell-1 rhythm-input-line"
+          type="number"
+          maxlength="2"
+          value="{{settings.customBreathRhythm.inhale}}"
+          data-rhythm="customBreathRhythm"
+          data-field="inhale"
+          bindinput="onBreathRhythmInput"
+          bindblur="onBreathRhythmBlur"
+        />
+        <text class="rhythm-separator rhythm-cell-2 rhythm-input-line">→</text>
+        <input
+          class="rhythm-compact-input rhythm-cell-3 rhythm-input-line"
+          type="number"
+          maxlength="2"
+          value="{{settings.customBreathRhythm.holdAfterInhale}}"
+          data-rhythm="customBreathRhythm"
+          data-field="holdAfterInhale"
+          bindinput="onBreathRhythmInput"
+          bindblur="onBreathRhythmBlur"
+        />
+        <text class="rhythm-separator rhythm-cell-4 rhythm-input-line">→</text>
+        <input
+          class="rhythm-compact-input rhythm-cell-5 rhythm-input-line"
+          type="number"
+          maxlength="2"
+          value="{{settings.customBreathRhythm.exhale}}"
+          data-rhythm="customBreathRhythm"
+          data-field="exhale"
+          bindinput="onBreathRhythmInput"
+          bindblur="onBreathRhythmBlur"
+        />
+        <text class="rhythm-separator rhythm-cell-6 rhythm-input-line">→</text>
+        <input
+          class="rhythm-compact-input rhythm-cell-7 rhythm-input-line"
+          type="number"
+          maxlength="2"
+          value="{{settings.customBreathRhythm.holdAfterExhale}}"
+          data-rhythm="customBreathRhythm"
+          data-field="holdAfterExhale"
+          bindinput="onBreathRhythmInput"
+          bindblur="onBreathRhythmBlur"
+        />
+        <text class="rhythm-separator rhythm-cell-8 rhythm-input-line">秒 ×</text>
+        <input
+          class="rhythm-compact-input rhythm-cell-9 rhythm-input-line"
+          type="number"
+          maxlength="2"
+          value="{{settings.customBreathRhythm.cycles}}"
+          data-rhythm="customBreathRhythm"
+          data-field="cycles"
+          bindinput="onBreathRhythmInput"
+          bindblur="onBreathRhythmBlur"
+        />
+        <text class="rhythm-unit-tail rhythm-cell-10 rhythm-input-line">组</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-head">
       <text class="section-title">天气</text>
     </view>
     <view class="field-block">

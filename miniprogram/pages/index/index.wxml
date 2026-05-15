@@ -92,8 +92,9 @@
 
   <view class="zen-stage" wx:if="{{zenActive && !videoOnlyActive}}">
     <view class="breath-stage">
-      <view class="breath-rotor">
-        <view class="breath-flower">
+      <view class="breath-countdown" wx:if="{{zenCountdownText}}">{{zenCountdownText}}</view>
+      <view class="breath-rotor" wx:if="{{zenFlowerVisible}}">
+        <view class="breath-flower breath-flower-manual {{zenFlowerBursting ? 'breath-flower-bursting' : ''}}" animation="{{breathFlowerAnimation}}">
           <view class="breath-petal breath-petal-0"></view>
           <view class="breath-petal breath-petal-1"></view>
           <view class="breath-petal breath-petal-2"></view>
@@ -104,9 +105,9 @@
       </view>
     </view>
     <view class="zen-label-slot">
-      <text class="zen-label zen-label-inhale">吸气</text>
-      <text class="zen-label zen-label-exhale">呼气</text>
+      <text class="zen-label zen-label-dynamic">{{zenPhaseText}}</text>
     </view>
+    <view class="zen-practice-note" wx:if="{{zenPracticeText}}">{{zenPracticeText}}</view>
     <view class="zen-cues">
       <view
         class="zen-cue {{settings.zenHaptics ? 'zen-cue-active' : ''}}"
@@ -116,6 +117,10 @@
         class="zen-cue {{settings.zenSound ? 'zen-cue-active' : ''}}"
         bindtap="toggleZenSound"
       >颂钵音</view>
+      <view
+        class="zen-cue {{zenBreathMode === 'custom' ? 'zen-cue-active' : ''}}"
+        bindtap="startCustomBreath"
+      >自定义练习</view>
     </view>
     <view class="zen-hint" wx:if="{{zenHintText}}">{{zenHintText}}</view>
     <view class="zen-exit" bindtap="exitZen">‹</view>

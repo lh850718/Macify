@@ -9,7 +9,16 @@ const { shuffledVideoQueue, videoById } = require('../../utils/videos.js');
 const { cachedVideoForSettings, cacheVideo } = require('../../utils/video-cache.js');
 const { getForecast, describeWeather } = require('../../utils/weather.js');
 
-const BREATH_PHASE_MS = 5000;
+const BREATH_HAPTIC_BASE_MS = 5000;
+const BREATH_SCALE_MIN = 0.45;
+const BREATH_SCALE_MAX = 1.2;
+const BREATH_HOLD_OPACITY = 0.76;
+const BREATH_PHASE_LABELS = Object.freeze({
+  inhale: '吸气',
+  holdAfterInhale: '屏息',
+  exhale: '呼气',
+  holdAfterExhale: '屏息',
+});
 const HAPTIC_LEAD_MS = 850;
 const ZEN_AUDIO_SOURCE = '/assets/breath.mp3';
 const ZEN_AUDIO_VOLUME = 0.55;
@@ -136,6 +145,44 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function secondsToMs(value) {
+  return Math.max(0, Math.round(Number(value) || 0) * 1000);
+}
+
+function rhythmPhaseMs(rhythm, phase) {
+  if (!rhythm) return 0;
+  return secondsToMs(rhythm[phase]);
+}
+
+function nextBreathPhase(phase, rhythm) {
+  if (phase === 'inhale') {
+    return rhythmPhaseMs(rhythm, 'holdAfterInhale') > 0 ? 'holdAfterInhale' : 'exhale';
+  }
+  if (phase === 'holdAfterInhale') return 'exhale';
+  if (phase === 'exhale') {
+    return rhythmPhaseMs(rhythm, 'holdAfterExhale') > 0 ? 'holdAfterExhale' : 'inhale';
+  }
+  return 'inhale';
+}
+
+function phaseLeadsIntoInhale(phase, rhythm) {
+  return phase === 'holdAfterExhale'
+    || (phase === 'exhale' && rhythmPhaseMs(rhythm, 'holdAfterExhale') <= 0);
+}
+
+function customBreathIntroText(rhythm) {
+  const parts = [];
+  if (Number(rhythm.inhale) > 0) parts.push(`吸${rhythm.inhale}秒`);
+  if (Number(rhythm.holdAfterInhale) > 0) parts.push(`屏息${rhythm.holdAfterInhale}秒`);
+  if (Number(rhythm.exhale) > 0) parts.push(`呼${rhythm.exhale}秒`);
+  if (Number(rhythm.holdAfterExhale) > 0) parts.push(`屏息${rhythm.holdAfterExhale}秒`);
+  return [
+    `本次练习${rhythm.cycles}组`,
+    parts.join('->'),
+    '可在设置中修改',
+  ].join('\n');
+}
+
 function windowWidth() {
   try {
     if (wx.getWindowInfo) return wx.getWindowInfo().windowWidth;
@@ -227,7 +274,14 @@ Page({
     videoFallbackUsed: false,
     videoOnlyActive: false,
     zenActive: false,
+    zenBreathMode: 'default',
+    zenPhaseText: '',
     zenHintText: '',
+    zenPracticeText: '',
+    zenCountdownText: '',
+    zenFlowerVisible: true,
+    zenFlowerBursting: false,
+    breathFlowerAnimation: null,
     videoError: '',
   },
 
@@ -868,10 +922,12 @@ Page({
     this.setData({ settings });
     if (settings.zenHaptics) {
       this.showZenHint('需要打开手机振动功能');
+      const rhythm = this.currentBreathRhythm();
+      const inhaleMs = rhythmPhaseMs(rhythm, 'inhale');
       if (this.zenPhase === 'inhale') {
-        this.playZenHaptics();
-      } else {
-        this.scheduleZenHapticLead();
+        this.playZenHaptics(0, inhaleMs);
+      } else if (phaseLeadsIntoInhale(this.zenPhase, rhythm)) {
+        this.scheduleZenHapticLead(this.delayToNextInhale(), inhaleMs);
       }
     } else {
       this.zenHapticLeadArmed = false;
@@ -889,10 +945,120 @@ Page({
     }
   },
 
+  startCustomBreath() {
+    if (!this.data.zenActive) return;
+    this.clearZenPhaseTimer();
+    this.clearZenHapticTimers();
+    this.clearZenPracticeTimer();
+    this.clearZenCountdownTimers();
+    const rhythm = this.data.settings.customBreathRhythm || getSettings().customBreathRhythm;
+    this.zenBreathMode = 'custom';
+    this.zenCustomCycleIndex = 0;
+    this.zenCustomTargetCycles = Math.max(1, Number(rhythm.cycles) || 1);
+    this.zenCustomIntroActive = true;
+    this.zenHapticLeadArmed = false;
+    this.setData({
+      zenBreathMode: 'custom',
+      zenPhaseText: '',
+      zenPracticeText: customBreathIntroText(rhythm),
+      zenCountdownText: '3',
+      zenFlowerVisible: false,
+      zenFlowerBursting: false,
+    });
+    this.startCustomBreathCountdown();
+  },
+
+  completeCustomBreath(cycles) {
+    this.clearZenHapticTimers();
+    this.clearZenPracticeTimer();
+    this.clearZenCountdownTimers();
+    this.zenHapticLeadArmed = false;
+    this.zenCustomIntroActive = false;
+    this.setData({
+      zenBreathMode: 'default',
+      zenPhaseText: '',
+      zenCountdownText: '',
+      zenFlowerBursting: true,
+      zenPracticeText: '本次练习完成，恢复默认呼吸',
+    });
+    this.playBubblePopHaptic();
+    this.runBreathCompletionAnimation(() => {
+      this.zenBreathMode = 'default';
+      this.zenCustomCycleIndex = 0;
+      this.zenCustomTargetCycles = 0;
+      this.setData({
+        zenBreathMode: 'default',
+        zenFlowerVisible: true,
+        zenFlowerBursting: false,
+      });
+      this.resetBreathPose(() => {
+        this.startZenPhase('inhale');
+      });
+      this.zenPracticeTimer = setTimeout(() => {
+        this.setData({ zenPracticeText: '' });
+        this.zenPracticeTimer = null;
+      }, 3200);
+    });
+  },
+
+  playBubblePopHaptic() {
+    if (!this.data.settings || !this.data.settings.zenHaptics) return;
+    vibrateShort('light');
+    setTimeout(() => {
+      if (this.data.zenActive && this.data.settings && this.data.settings.zenHaptics) {
+        vibrateShort('light');
+      }
+    }, 80);
+  },
+
+  startCustomBreathCountdown() {
+    this.zenCountdownTimers = [
+      setTimeout(() => {
+        if (this.data.zenActive && this.zenBreathMode === 'custom') {
+          this.setData({ zenCountdownText: '2' });
+        }
+      }, 1000),
+      setTimeout(() => {
+        if (this.data.zenActive && this.zenBreathMode === 'custom') {
+          this.setData({ zenCountdownText: '1' });
+        }
+      }, 2000),
+      setTimeout(() => {
+        this.zenCountdownTimers = [];
+        if (!this.data.zenActive || this.zenBreathMode !== 'custom') return;
+        this.zenCustomIntroActive = false;
+        this.setData({
+          zenCountdownText: '',
+          zenFlowerVisible: true,
+        });
+        this.updateCustomBreathProgressText();
+        this.resetBreathPose(() => {
+          this.startZenPhase('inhale');
+        });
+      }, 3000),
+    ];
+  },
+
   startZenCues() {
     this.clearZenPhaseTimer();
     this.clearZenHapticTimers();
-    this.startZenPhase('inhale');
+    this.clearZenPracticeTimer();
+    this.clearZenCountdownTimers();
+    this.zenBreathMode = 'default';
+    this.zenCustomCycleIndex = 0;
+    this.zenCustomTargetCycles = 0;
+    this.zenCustomIntroActive = false;
+    this.setData({
+      zenBreathMode: 'default',
+      zenPhaseText: '',
+      zenPracticeText: '',
+      zenCountdownText: '',
+      zenFlowerVisible: true,
+      zenFlowerBursting: false,
+    });
+    this.resetBreathPose(() => {
+      this.startZenPhase('inhale');
+    });
     if (this.data.settings.zenSound) this.playZenSound();
   },
 
@@ -900,9 +1066,23 @@ Page({
     this.clearZenPhaseTimer();
     this.clearZenHapticTimers();
     this.clearZenHintTimer();
-    this.setData({ zenHintText: '' });
+    this.clearZenPracticeTimer();
+    this.clearZenCountdownTimers();
+    this.setData({
+      zenBreathMode: 'default',
+      zenPhaseText: '',
+      zenHintText: '',
+      zenPracticeText: '',
+      zenCountdownText: '',
+      zenFlowerVisible: true,
+      zenFlowerBursting: false,
+    });
     this.stopZenAudio();
     this.zenPhase = null;
+    this.zenBreathMode = 'default';
+    this.zenCustomCycleIndex = 0;
+    this.zenCustomTargetCycles = 0;
+    this.zenCustomIntroActive = false;
     this.zenHapticLeadArmed = false;
   },
 
@@ -929,6 +1109,22 @@ Page({
     }
   },
 
+  clearZenPracticeTimer() {
+    if (this.zenPracticeTimer) {
+      clearTimeout(this.zenPracticeTimer);
+      this.zenPracticeTimer = null;
+    }
+  },
+
+  clearZenCountdownTimers() {
+    if (!this.zenCountdownTimers) {
+      this.zenCountdownTimers = [];
+      return;
+    }
+    this.zenCountdownTimers.forEach((timer) => clearTimeout(timer));
+    this.zenCountdownTimers = [];
+  },
+
   showZenHint(text) {
     this.clearZenHintTimer();
     this.setData({ zenHintText: text });
@@ -938,44 +1134,174 @@ Page({
     }, 2000);
   },
 
+  currentBreathRhythm() {
+    const settings = this.data.settings && Object.keys(this.data.settings).length
+      ? this.data.settings
+      : getSettings();
+    return this.zenBreathMode === 'custom'
+      ? settings.customBreathRhythm
+      : settings.defaultBreathRhythm;
+  },
+
+  updateCustomBreathProgressText() {
+    if (!this.data.zenActive || this.zenBreathMode !== 'custom' || this.zenCustomIntroActive) return;
+    const targetCycles = this.zenCustomTargetCycles || Math.max(1, Number(this.currentBreathRhythm().cycles) || 1);
+    const completedCycles = Math.max(0, this.zenCustomCycleIndex - 1);
+    const remainingCycles = Math.max(1, targetCycles - completedCycles);
+    this.setData({
+      zenPracticeText: `还剩${remainingCycles}组`,
+    });
+  },
+
+  delayToNextInhale() {
+    const rhythm = this.currentBreathRhythm();
+    if (!this.zenPhase || this.zenPhase === 'inhale') return 0;
+    if (this.zenPhase === 'holdAfterInhale') {
+      return rhythmPhaseMs(rhythm, 'exhale') + rhythmPhaseMs(rhythm, 'holdAfterExhale');
+    }
+    if (this.zenPhase === 'exhale') {
+      return rhythmPhaseMs(rhythm, 'exhale') + rhythmPhaseMs(rhythm, 'holdAfterExhale');
+    }
+    return rhythmPhaseMs(rhythm, 'holdAfterExhale');
+  },
+
+  resetBreathPose(callback) {
+    if (!wx.createAnimation) {
+      if (callback) callback();
+      return;
+    }
+    const animation = wx.createAnimation({
+      duration: 0,
+      timingFunction: 'linear',
+    });
+    animation.scale(BREATH_SCALE_MIN).opacity(1).step();
+    this.setData({
+      breathFlowerAnimation: animation.export(),
+    }, () => {
+      if (!callback) return;
+      this.zenPhaseTimer = setTimeout(callback, 40);
+    });
+  },
+
+  runBreathPhaseAnimation(phase, durationMs) {
+    if (!wx.createAnimation || durationMs <= 0) return;
+    const animation = wx.createAnimation({
+      duration: durationMs,
+      timingFunction: 'ease-in-out',
+    });
+
+    if (phase === 'inhale') {
+      animation.scale(BREATH_SCALE_MAX).opacity(1).step();
+    } else if (phase === 'exhale') {
+      animation.scale(BREATH_SCALE_MIN).opacity(1).step();
+    } else {
+      const scale = phase === 'holdAfterInhale' ? BREATH_SCALE_MAX : BREATH_SCALE_MIN;
+      const firstStepMs = Math.max(1, Math.floor(durationMs / 2));
+      animation.scale(scale).opacity(BREATH_HOLD_OPACITY).step({
+        duration: firstStepMs,
+        timingFunction: 'ease-in-out',
+      });
+      animation.scale(scale).opacity(1).step({
+        duration: Math.max(1, durationMs - firstStepMs),
+        timingFunction: 'ease-in-out',
+      });
+    }
+
+    this.setData({
+      breathFlowerAnimation: animation.export(),
+    });
+  },
+
+  runBreathCompletionAnimation(callback) {
+    if (!wx.createAnimation) {
+      if (callback) callback();
+      return;
+    }
+    const animation = wx.createAnimation({
+      duration: 760,
+      timingFunction: 'ease-out',
+    });
+    animation.scale(1.9).rotate(24).opacity(0).step();
+    this.setData({
+      breathFlowerAnimation: animation.export(),
+    });
+    this.zenPhaseTimer = setTimeout(() => {
+      if (callback) callback();
+    }, 820);
+  },
+
   startZenPhase(phase) {
     if (!this.data.zenActive) return;
     this.clearZenPhaseTimer();
-    this.zenPhase = phase;
+    const rhythm = this.currentBreathRhythm();
 
-    if (phase === 'inhale') {
-      if (this.data.settings.zenHaptics && !this.zenHapticLeadArmed) this.playZenHaptics(HAPTIC_LEAD_MS);
-      this.zenPhaseTimer = setTimeout(() => {
-        this.startZenPhase('exhale');
-      }, BREATH_PHASE_MS);
-      return;
+    if (phase === 'inhale' && this.zenBreathMode === 'custom') {
+      const targetCycles = Math.max(1, Number(rhythm.cycles) || 1);
+      if (this.zenCustomCycleIndex >= targetCycles) {
+        this.completeCustomBreath(targetCycles);
+        return;
+      }
+      this.zenCustomCycleIndex += 1;
     }
 
-    this.clearZenHapticTimers();
-    this.zenHapticLeadArmed = false;
-    this.scheduleZenHapticLead();
+    this.zenPhase = phase;
+    const durationMs = rhythmPhaseMs(rhythm, phase);
+    const inhaleMs = rhythmPhaseMs(rhythm, 'inhale');
+    const nextPhase = nextBreathPhase(phase, rhythm);
+
+    if (phase === 'inhale') {
+      if (this.data.settings.zenHaptics && !this.zenHapticLeadArmed) {
+        this.playZenHaptics(0, inhaleMs);
+      }
+      if (this.zenBreathMode === 'custom') this.updateCustomBreathProgressText();
+    } else if (phase === 'exhale') {
+      this.clearZenHapticTimers();
+      this.zenHapticLeadArmed = false;
+    }
+
+    if (phaseLeadsIntoInhale(phase, rhythm)) {
+      this.scheduleZenHapticLead(durationMs, inhaleMs);
+    }
+
+    this.setData({
+      zenBreathMode: this.zenBreathMode,
+      zenPhaseText: BREATH_PHASE_LABELS[phase] || '',
+    });
+    this.runBreathPhaseAnimation(phase, durationMs);
     this.zenPhaseTimer = setTimeout(() => {
-      this.startZenPhase('inhale');
-    }, BREATH_PHASE_MS);
+      if (
+        (phase === 'holdAfterInhale' && nextPhase === 'exhale')
+        || (phase === 'exhale' && nextPhase === 'holdAfterExhale')
+      ) {
+        this.playBubblePopHaptic();
+      }
+      this.startZenPhase(nextPhase);
+    }, durationMs);
   },
 
-  scheduleZenHapticLead() {
-    if (!this.data.zenActive || this.zenPhase !== 'exhale' || !this.data.settings.zenHaptics) return;
+  scheduleZenHapticLead(delayToInhaleMs, inhaleMs) {
+    if (!this.data.zenActive || !this.data.settings.zenHaptics) return;
     this.clearZenHapticTimers();
     this.zenHapticLeadArmed = true;
+    const scale = Math.max(0.2, inhaleMs / BREATH_HAPTIC_BASE_MS);
     this.zenHapticTimers = HAPTIC_PATTERNS.inhale.map((cue) => (
       setTimeout(() => {
-        if (this.data.zenActive && this.zenHapticLeadArmed) vibrateShort(cue.type);
-      }, BREATH_PHASE_MS + cue.at - HAPTIC_LEAD_MS)
+        if (this.data.zenActive && this.data.settings.zenHaptics && this.zenHapticLeadArmed) {
+          vibrateShort(cue.type);
+        }
+      }, Math.max(0, delayToInhaleMs + cue.at * scale - HAPTIC_LEAD_MS))
     ));
   },
 
-  playZenHaptics(leadMs = 0) {
+  playZenHaptics(leadMs = 0, inhaleMs = BREATH_HAPTIC_BASE_MS) {
     this.clearZenHapticTimers();
+    const scale = Math.max(0.2, inhaleMs / BREATH_HAPTIC_BASE_MS);
     this.zenHapticTimers = HAPTIC_PATTERNS.inhale.map((cue) => (
       setTimeout(() => {
-        if (this.data.zenActive && this.zenPhase === 'inhale') vibrateShort(cue.type);
-      }, Math.max(0, cue.at - leadMs))
+        if (this.data.zenActive && this.data.settings.zenHaptics && this.zenPhase === 'inhale') {
+          vibrateShort(cue.type);
+        }
+      }, Math.max(0, cue.at * scale - leadMs))
     ));
   },
 

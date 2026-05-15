@@ -1,17 +1,32 @@
 const SETTINGS_KEY = 'macify.settings.v1';
 const CACHE_PREFIX = 'macify.cache.';
 const FAVORITE_VIDEOS_KEY = 'favorite-videos-v1';
-const DEFAULT_LITE_VIDEO_BASE = 'https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify';
 const DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE = 'https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-premium';
-const LITE_SOURCE_VERSION = 'mp4-1080p-cos-20260510';
-const PREMIUM_FREE_AERIAL_SOURCE_VERSION = 'premium-free-aerial-1080p-cos-20260512-67';
+const PREMIUM_FREE_AERIAL_SOURCE_VERSION = 'premium-free-aerial-1080p-cos-20260514-99';
 const SHUFFLE_SCOPE_VERSION = 'default-all-20260510';
-const DEFAULT_VIDEO_LIBRARY = 'apple';
-
-const VIDEO_LIBRARIES = Object.freeze({
-  apple: 'apple',
-  premiumFreeAerial: 'premiumFreeAerial',
+const DEFAULT_VIDEO_LIBRARY = 'premiumFreeAerial';
+const DEFAULT_BREATH_RHYTHM = Object.freeze({
+  inhale: 5,
+  holdAfterInhale: 0,
+  exhale: 5,
+  holdAfterExhale: 0,
 });
+const DEFAULT_CUSTOM_BREATH_RHYTHM = Object.freeze({
+  inhale: 4,
+  holdAfterInhale: 7,
+  exhale: 8,
+  holdAfterExhale: 0,
+  cycles: 8,
+});
+const PUBLIC_SHUFFLE_SCOPES = Object.freeze([
+  'all',
+  'favorites',
+  'Landscapes',
+  'Cities',
+  'AnimalsAndPlants',
+  'Motion',
+  'Underwater',
+]);
 
 const DEFAULT_SETTINGS = Object.freeze({
   city: 'Shanghai',
@@ -24,15 +39,13 @@ const DEFAULT_SETTINGS = Object.freeze({
   shuffleScopeVersion: SHUFFLE_SCOPE_VERSION,
   videoLibrary: DEFAULT_VIDEO_LIBRARY,
   videoSource: 'lite',
-  liteVideoBase: DEFAULT_LITE_VIDEO_BASE,
-  liteSourceVersion: LITE_SOURCE_VERSION,
   premiumFreeAerialVideoBase: DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE,
   premiumFreeAerialSourceVersion: PREMIUM_FREE_AERIAL_SOURCE_VERSION,
-  reverseProxy: false,
-  proxyBase: '',
   zenHaptics: false,
   zenSound: false,
   rememberZenCues: false,
+  defaultBreathRhythm: DEFAULT_BREATH_RHYTHM,
+  customBreathRhythm: DEFAULT_CUSTOM_BREATH_RHYTHM,
 });
 
 function readJson(key, fallback) {
@@ -53,20 +66,37 @@ function writeJson(key, value) {
   }
 }
 
+function normalizeNumber(value, fallback, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(number)));
+}
+
+function normalizeBreathRhythm(raw, defaults, includeCycles = false) {
+  const source = raw || {};
+  const rhythm = {
+    inhale: normalizeNumber(source.inhale, defaults.inhale, 1, 60),
+    holdAfterInhale: normalizeNumber(source.holdAfterInhale, defaults.holdAfterInhale, 0, 60),
+    exhale: normalizeNumber(source.exhale, defaults.exhale, 1, 60),
+    holdAfterExhale: normalizeNumber(source.holdAfterExhale, defaults.holdAfterExhale, 0, 60),
+  };
+
+  if (includeCycles) {
+    rhythm.cycles = normalizeNumber(source.cycles, defaults.cycles, 1, 99);
+  }
+
+  return rhythm;
+}
+
 function normalizeSettings(raw) {
   const settings = {
     ...DEFAULT_SETTINGS,
     ...(raw || {}),
   };
-  if (!Object.prototype.hasOwnProperty.call(VIDEO_LIBRARIES, settings.videoLibrary)) {
-    settings.videoLibrary = DEFAULT_VIDEO_LIBRARY;
-  }
-  if (settings.videoSource === 'apple' || settings.videoSource === 'original4k') {
-    settings.videoSource = 'apple1080';
-  }
-  if (settings.videoSource !== 'lite' && settings.videoSource !== 'apple1080') {
-    settings.videoSource = 'lite';
-  }
+  // Public release uses the licensed free-video library only. Keep old preview
+  // installs normalized so they cannot keep playing removed source modes.
+  settings.videoLibrary = DEFAULT_VIDEO_LIBRARY;
+  settings.videoSource = 'lite';
   if (!raw || raw.shuffleScopeVersion !== SHUFFLE_SCOPE_VERSION) {
     settings.shuffleScope = 'all';
     settings.shuffleScopeVersion = SHUFFLE_SCOPE_VERSION;
@@ -74,17 +104,8 @@ function normalizeSettings(raw) {
   if (settings.shuffleScope === 'Animals') {
     settings.shuffleScope = 'AnimalsAndPlants';
   }
-  if (!raw || raw.liteSourceVersion !== LITE_SOURCE_VERSION) {
-    if (!raw || settings.videoSource === 'apple1080') {
-      settings.videoSource = 'lite';
-    }
-    if (!settings.liteVideoBase) {
-      settings.liteVideoBase = DEFAULT_LITE_VIDEO_BASE;
-    }
-    settings.liteSourceVersion = LITE_SOURCE_VERSION;
-  }
-  if (settings.videoSource === 'lite' && !settings.liteVideoBase) {
-    settings.liteVideoBase = DEFAULT_LITE_VIDEO_BASE;
+  if (!PUBLIC_SHUFFLE_SCOPES.includes(settings.shuffleScope)) {
+    settings.shuffleScope = 'all';
   }
   if (!settings.premiumFreeAerialVideoBase) {
     settings.premiumFreeAerialVideoBase = DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE;
@@ -92,6 +113,15 @@ function normalizeSettings(raw) {
   if (settings.premiumFreeAerialSourceVersion !== PREMIUM_FREE_AERIAL_SOURCE_VERSION) {
     settings.premiumFreeAerialSourceVersion = PREMIUM_FREE_AERIAL_SOURCE_VERSION;
   }
+  settings.defaultBreathRhythm = normalizeBreathRhythm(
+    settings.defaultBreathRhythm,
+    DEFAULT_BREATH_RHYTHM,
+  );
+  settings.customBreathRhythm = normalizeBreathRhythm(
+    settings.customBreathRhythm,
+    DEFAULT_CUSTOM_BREATH_RHYTHM,
+    true,
+  );
   return settings;
 }
 
@@ -184,10 +214,10 @@ function toggleFavoriteVideo(video) {
 
 module.exports = {
   DEFAULT_SETTINGS,
-  DEFAULT_LITE_VIDEO_BASE,
+  DEFAULT_BREATH_RHYTHM,
+  DEFAULT_CUSTOM_BREATH_RHYTHM,
   DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE,
   DEFAULT_VIDEO_LIBRARY,
-  LITE_SOURCE_VERSION,
   PREMIUM_FREE_AERIAL_SOURCE_VERSION,
   SHUFFLE_SCOPE_VERSION,
   getSettings,

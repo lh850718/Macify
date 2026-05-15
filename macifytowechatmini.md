@@ -1,6 +1,6 @@
-# Macify to WeChat Mini Program Handoff
+# 呼吸Zen / Macify WeChat Mini Program Handoff
 
-本文记录把 Macify 从 Chrome 扩展改造成微信小程序的当前进展、技术选择、已实现内容、踩坑原因，以及下一步可直接继续执行的路线。
+本文记录把 Macify 从 Chrome 扩展改造成微信小程序“呼吸Zen”的当前进展、技术选择、已实现内容、踩坑原因，以及下一步可直接继续执行的路线。
 
 注意：本文后半包含大量历史过程记录。若历史记录与顶部“必须先读：当前硬性原则”冲突，一律以顶部硬性原则和当前代码为准。
 
@@ -8,18 +8,20 @@
 
 任何新的聊天窗口、接手者或自动化任务，在继续处理视频源之前必须先遵守本节。下面不是过程记录，而是当前项目决策。
 
-### Apple 源不可被替换
+### 公开发布版不展示或打包 Apple 源
 
-- Apple 轻量视频源是默认主源，必须保留。
-- 不要删除 `miniprogram/data/apple-aerial-1080.js`。
-- 不要覆盖腾讯云 COS 的 Apple 路径：
+- 公开发布版统一使用 `premiumFreeAerial` 背景视频池，用户侧不展示 Apple / 高端免费航拍 / Mixkit / Pixabay 等素材来源选择，只展示分类筛选。
+- 公开发布版运行时代码不得 `require` / `import` `miniprogram/data/apple-aerial-1080.js` 或 `miniprogram/data/video-intros.js`。
+- `project.config.json` 与 `miniprogram/project.config.json` 必须通过 `packOptions.ignore` 排除 Apple 清单和 Apple 介绍数据，避免进入上传包。
+- 仓库内暂时保留 `miniprogram/data/apple-aerial-1080.js` 作为历史回滚资料，不在公开版播放池中使用；未来若确认彻底不用，可再单独删除。
+- 不要覆盖腾讯云 COS 的 Apple 历史路径：
 
 ```text
 macify/videos/<apple-video-id>.mp4
 https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify
 ```
 
-- 非 Apple 视频只能走独立清单和独立 COS 前缀。
+- 新增公开视频只能走独立清单和独立 COS 前缀。
 
 ### NPS / publicDomain 路线已废弃
 
@@ -42,7 +44,8 @@ macify-public/
 
 ```text
 videoLibrary: 'premiumFreeAerial'
-产品文案: 高端免费航拍
+内部素材库名: premiumFreeAerial
+用户侧文案: 不展示素材库来源，只展示分类
 清单: miniprogram/data/premium-free-aerial-videos.js
 COS base: https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-premium
 COS path: macify-premium/videos/<source-video-id>.mp4
@@ -68,7 +71,7 @@ Coverr
 | --- | ---: | ---: | ---: | ---: | --- |
 | Mixkit | 100 | 7 | 0 | 7 | 已发布 7 条；日本主题通过 3 条已上传 COS 并标记 published；其余 12 条已删除 |
 | Pexels | 100 | 0 | 0 | 0 | 未开始 |
-| Pixabay | 100 | 60 | 0 | 60 | 已发布 60 条；本轮 17 条 Pixabay 样片已上传 COS 并标记 published，金阁池影已按用户要求删除 |
+| Pixabay | 100 | 92 | 0 | 92 | 已发布 92 条；本轮 7 条 Pixabay 样片已通过审片并上传 COS，`pixabay-183960` 重复输入已跳过，`pixabay-316029` 因 AI generated / low quality 未写入 |
 | Dareful | 100 | 0 | 0 | 0 | 未开始 |
 | Coverr | 100 | 0 | 0 | 0 | 未开始 |
 
@@ -104,7 +107,7 @@ Coverr
 
 ### 分类必须保持简洁
 
-设置页恢复 Apple 原始 `Space` 分类筛选入口，但产品里显示为“太空”，不要再叫“地球”。Premium Free Aerial 当前只使用：
+公开发布版设置页只展示统一背景视频池的分类筛选，不展示 Apple 原始 `Space` 分类。当前公开背景视频池只使用：
 
 ```text
 Landscapes
@@ -165,37 +168,57 @@ qualityTier
 npm run mini:premium:validate
 ```
 
-### 非 Apple 版权声明策略
+### 素材与授权页策略
 
-- 每条非 Apple 视频必须保留 `sourceName`、`sourcePage`、`sourceDownloadPage`、`license`、`attribution`、`licenseNotes`，这些字段是版权和授权追溯记录。
+- 呼吸Zen 基于 GitHub 开源项目 `jason5ng32/Macify` 改造。原项目采用 MIT License，版权声明为 `Copyright (c) 2023 Jason Ng`，README Credits 记录创建者 `Jason Ng, Dofy, Setilis`；公开发布版必须在 `© 呼吸Zen` 授权记录页保留开源项目声明，并在 `miniprogram/OPEN_SOURCE_NOTICES.txt` 保留 MIT License 原文和项目链接，确保小程序上传包也带有许可声明。
+- 每条公开视频必须保留 `sourceName`、`sourcePage`、`sourceDownloadPage`、`license`、`attribution`、`licenseNotes`，这些字段是版权和授权追溯记录。
 - `description` 只写地点、人文、自然知识或公版诗句意象，不写素材来源、许可证、上传状态、候选状态或技术信息。
-- 版权声明不要塞进单条视频介绍文案。发布前应单独做“视频素材与授权”页或设置页入口，集中列出来源、作者、许可证和来源链接。
-- 当前 Mixkit 与 Pixabay 条目都记录为无需强制署名，但建议仍在“视频素材与授权”页给出署名和链接，保持透明。
+- 版权声明不要塞进单条视频介绍文案。设置页左上标题直接显示 `© 呼吸Zen`，点击标题进入 `miniprogram/pages/licenses/licenses.*`；不要额外放右上角入口或“关于”区域。
+- 授权记录页只保留首屏概要区域，不单独展示“记录”或“视频素材”区域。首屏不直接展示 `Mixkit`、`Pixabay` 等来源平台名。点 `Macify` 展示开源声明；点“公开素材”四个字才在同一区域内展示来源平台；点平台展示该平台视频名列表；点视频名展示作者/署名、许可证和备注。
+- 来源平台详情由 `premium-free-aerial-videos.js` 中 `qualityTier: 'published'` 的条目按 `sourceName` 自动生成；`SOURCE_PLATFORMS` 只保存平台许可说明文案，未来新增 `sourceName` 时同步补齐对应说明。
+- 未来每次新增公开视频、改来源平台、改许可证字段或新增 `sourceName`，都必须同步检查并更新授权记录页；如果只是新增同平台视频且清单字段完整，页面清单会自动带出，但仍要确认平台声明是否准确。
+- 当前 Mixkit 与 Pixabay 条目都记录为无需强制署名，但仍应在授权记录页的单条详情里保留署名状态；来源链接保留在数据字段和 `OPEN_SOURCE_NOTICES.txt`，不在页面上直接展示。
 - 如果未来做收费 App，不能只靠声明版权解决授权风险。必须确认每个来源的许可允许商业 App 内使用，且 App 不是把素材作为独立视频、壁纸、素材库或下载资源转售。单纯裁切、转码、调色通常不足以把素材变成新的创作。
-- 建议版权页总声明：
+- 版权页总声明使用：
 
 ```text
-部分视频素材来自 Mixkit 与 Pixabay，已按各平台许可用于应用内背景体验。素材版权归原作者或相应权利人所有；Macify 不声明拥有这些素材的版权。各视频的作者、来源链接与许可证信息见本页清单。
+呼吸Zen 基于 Macify 改造；背景视频按公开素材平台许可用于应用内背景体验。素材版权归原作者或相应权利人所有；呼吸Zen 不声明拥有这些素材版权，也不提供素材下载、转售或独立素材库分发。
 ```
 
 - 建议单条声明格式：
 
 ```text
-<视频标题> — <sourceName> / <attribution>
-来源：<sourcePage>
+<视频标题>
+来源：<sourceName> / <attribution>
 许可证：<license>
 备注：<licenseNotes>
 ```
 
 ### 小程序播放与缓存策略
 
-- 用户不点击“换视频”时，当前视频循环播放，不自动切下一条。
-- 用户主动换视频或下拉刷新时，随机策略要尽量避免同一播放范围内很快刷到同一条视频；当前实现按 `videoSource`、`videoLibrary`、`shuffleScope` 记录本地随机历史，一轮内优先播放未出现过的视频，直到范围耗尽后再允许重复。
+- 用户不主动手势切换视频时，当前视频循环播放，不自动切下一条；首页循环不依赖 `<video>` 原生硬切 `loop`，而是在接近结尾约 3.5 秒时启动第二个同源视频，旧视频保持不透明兜底，新视频从开头用约 3 秒淡入覆盖，减少循环跳跃感且避免交接时暗一下。
+- 首页和呼吸页都使用上下滑动手势切换视频：向上滑动随机下一条，向下滑动回到上一条；上一条只保留一条记录，不维护更长历史。若用户下滑从 B 回到 A，下一次上滑应优先回到 B，再继续上滑才随机新视频。
+- 首页普通状态长按视频进入纯视频模式：触发一次短触感反馈并隐藏标题、天气、时钟、名言、冥想入口、底部按钮、弹层和遮罩，只保留背景视频；纯视频模式下仍支持上滑/下滑切换视频，轻点屏幕恢复普通首页。
+- 用户主动向上滑动切换视频时，随机策略要尽量避免同一播放范围内很快刷到同一条视频；当前实现按 `videoSource`、`videoLibrary`、`shuffleScope` 记录本地随机历史，一轮内优先播放未出现过的视频，直到范围耗尽后再允许重复。
+- 右下角原“换视频 / 刷新”入口已改为切换名人名言，不再触发视频切换。
+- 小程序系统下拉刷新不再作为换视频入口，避免和“向下滑动回到上一条”冲突。
 - 只缓存 `videoSource === 'lite'` 的 MP4。
-- 下次进入小程序如果还能找到上一次缓存的视频，就继续播放上一次本地缓存。
-- 如果没有缓存，才随机选择一条视频。
-- 用户主动换视频或下拉刷新时，才随机选择新视频。
+- 每次打开首页或切换播放范围时，按当前范围在本地临时生成一条随机播放队列；队列用完前按队列顺序播放，不重复抽到同一条。
+- 如果队列用完，再按当前范围重新洗牌生成下一轮队列；只有范围内视频少于 2 条时才可能连续重复。
+- 为避免“每次打开都看到上一条”，首页首条也从本次临时队列中选择，不再直接把上一次缓存视频作为首条。缓存仍用于下载和后续播放优化。
+- 用户主动向上滑动切换视频时，播放本次队列中的下一条。
 - 本地缓存只保留最近一条，避免越积越多。
+
+### 呼吸节奏与自定义练习策略
+
+- 设置页“呼吸节奏”区提供两类设置：`默认呼吸` 和 `自定义练习`。
+- 默认呼吸节奏字段为：吸气、屏息、呼气、屏息，默认值 `5-0-5-0`。用户每次打开呼吸页进入的普通呼吸模式都使用这组默认节奏。
+- 自定义练习节奏字段为：吸气、屏息、呼气、屏息、组数，默认值 `4-7-8-0-8`。自定义练习只用于一次短时练习，完成后自动恢复默认呼吸模式。
+- 呼吸动画必须按设置节奏驱动：吸气为花朵从最小放大到最大；吸气后屏息为最大状态轻微明暗变化；呼气为最大缩小到最小；呼气后屏息为最小状态轻微明暗变化。屏息值为 `0` 时跳过该阶段，不能卡在最大或最小状态。
+- 呼吸页底部保留 `触感`、`颂钵音`、`自定义练习` 三个入口；点击自定义练习后，花朵先隐藏，中央显示 `3 / 2 / 1` 倒计时，并展示练习说明。
+- 自定义练习说明格式为三行：`本次练习*组`、按非零阶段拼接的节奏行、`可在设置中修改`。阶段值为 `0` 时，对应文字和箭头都不展示。
+- 自定义练习正式开始后，同一位置显示剩余组数；完成后花朵散开淡出，并显示 `本次练习完成，恢复默认呼吸`。
+- 呼吸触感只在用户打开 `触感` 时触发。吸气触感随吸气时长缩放；有屏息阶段时，在屏息切换到下一阶段的节点播放轻触感提示；未开启触感或对应屏息为 `0` 时不得振动。
 
 ### 小程序直接 URL 已删除
 
@@ -266,6 +289,56 @@ macify/videos/
 SecretId: 敏感凭证，不保存
 SecretKey: 敏感凭证，不保存
 ```
+
+### ICP / CDN / 小程序上线当前状态
+
+截至 2026-05-13 用户反馈的最新腾讯云 ICP 状态：
+
+```text
+备案订单号: 30177839176900401
+订单类型: 新增服务（原备案不在腾讯云）
+创建时间: 2026-05-10 13:42:49
+当前阶段: 腾讯云审核中
+已完成: 1 提交初审
+进行中: 2 腾讯云审核
+后续: 3 待提交管局、4 工信部短信核验、5 管局审核
+审核提醒: 腾讯云将在 1-2 个工作日内给李慧（手机号 136****7633、135****2101）致电；第一次未接通 1 小时内再次拨打，均未接通会导致驳回。
+```
+
+用户应立即做：
+
+- 把腾讯云审核电话加入通讯录，临时关闭骚扰拦截，保持 `136****7633` 和 `135****2101` 可接通。
+- 腾讯云初审通过后，工信部短信核验必须在 24 小时内完成。
+- 管局审核预计 1-20 个工作日。
+
+上线相关状态：
+
+- 备案域名：`huxizen.com`
+- 计划 CDN 域名：`video.huxizen.com`
+- 当前代码默认视频源仍是 COS 默认域名：`https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-premium`
+- 备案通过并完成 CDN 接入前，不要把代码默认视频源切到 `video.huxizen.com`。
+- 备案通过后，接入 CDN 到 COS `macify-premium/`，再把 `DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE` 改为 `https://video.huxizen.com/macify-premium`，并 bump `PREMIUM_FREE_AERIAL_SOURCE_VERSION`，强制旧缓存刷新。
+
+微信小程序后台上线前必须检查：
+
+```text
+request 合法域名:
+https://api.open-meteo.com
+https://geocoding-api.open-meteo.com
+
+downloadFile 合法域名（备案/CDN 前临时）:
+https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com
+
+downloadFile 合法域名（备案/CDN 后正式）:
+https://video.huxizen.com
+```
+
+注意区分两类备案：
+
+- 腾讯云当前这单是 `huxizen.com` 的网站/域名 ICP 备案，主要服务于后续 `video.huxizen.com` CDN 域名。
+- 微信公众平台里还要检查小程序本体备案状态。若后台显示小程序未备案或待补充备案，必须在微信公众平台完成小程序备案后才能最终发布。
+
+当前小程序只用 `wx.request` 获取天气、`wx.downloadFile` 缓存视频；没有 `wx.login`、`wx.getUserProfile`、`wx.getLocation`、上传文件、支付、订阅消息或用户事件上报。隐私指引里不要声明不存在的数据采集；若后续增加定位、openid、统计或收藏上报，必须同步更新隐私保护指引。
 
 ### 当前下一步
 
@@ -438,7 +511,61 @@ pixabay-34855
 
 2026-05-12 新增 Premium Free Aerial 主分类 `Motion`，产品显示为“运转”。已把 `夜营火光`、`夜空烟火`、`稻田风机`、`琵琶湖烟火`、`麦田收割`、`营火煮茶`、`炉火冬夜`、`黑胶回声`、`齿轮流光` 归入该分类；验证脚本允许 `Motion`。随后删除“直接 URL”视频源和设置页输入框；旧本地设置里如果仍是 `videoSource: 'direct'`，会自动归回 `lite`。Apple 原始 `Space` 分类在设置页恢复显示，但中文名改为“太空”，不再显示“地球”。Pixabay 下载页、B 站页面、需要 Cookie/登录/防盗链的链接都不要直接塞给小程序 `<video>`，应先转到自有 COS/CDN 或正式素材库流程。
 
+2026-05-13 用户提供 8 条 Pixabay 链接和人工分类，其中 `pixabay-204006` 已在 2026-05-12 批次发布，本次不重复写入。其余 7 条已通过 ImageURLGenerator 的 `/api/pixabay` 代理解析到稳定 `cdn.pixabay.com` large/medium 直链；`pixabay.com/videos/download/...` 下载地址仍会返回 Cloudflare 403，不作为小程序运行时 URL。当前公开版分类仍只使用既有枚举，因此 3 条“太空”素材写入 `Landscapes`，并在 `subcategories` / `tags` 中保留 `Space`。本轮新增条目为：
+
+```text
+pixabay-2118
+pixabay-31420
+pixabay-201404
+pixabay-11722
+pixabay-111179
+pixabay-67358
+pixabay-264272
+```
+
+本次已上传到 `macify-premium/videos/`，同步报告显示 7 个新视频上传、67 个历史视频跳过；随后刷新远端完整 74 条 `manifest.json` / `manifest.csv`，并逐条验证上述 7 个公开视频为 `200 OK` / `video/mp4`。未触碰 Apple 路径。已将 `PREMIUM_FREE_AERIAL_SOURCE_VERSION` bump 到 `premium-free-aerial-1080p-cos-20260513-74`，更新后会失效旧 Premium 本地缓存。
+
 如果用户感觉没有刷到这批新视频，原因通常是 COS 已上传但小程序包还没有重新编译/上传：视频随机池来自打包进小程序的 `miniprogram/data/premium-free-aerial-videos.js`，不是远端 manifest。高端免费航拍随机池只读取 `qualityTier: 'published'` 的记录，避免后续候选样片混进正式池。测试时请确认设置里视频库选的是“高端免费航拍”、分类是“全部”。
+
+2026-05-13 用户继续提供 6 条 Pixabay 链接和人工分类。已通过 ImageURLGenerator 的 `/api/pixabay` 代理解析到稳定 `cdn.pixabay.com` large/medium 直链，并追加到 `premium-free-aerial-videos.js`。已给用户审阅本地 1080p 竖屏样片和文案，用户回复“样片文案 ok”，本轮 6 条已标记为 `qualityTier: 'published'`，上传到 `macify-premium/videos/`，并刷新远端完整 80 条 `manifest.json` / `manifest.csv`。本轮发布为：
+
+```text
+pixabay-213616
+pixabay-26818
+pixabay-16166
+pixabay-83061
+pixabay-63427
+pixabay-27784
+```
+
+其中用户标记为“自然”的两条水下海浪素材，按当前公开版枚举落到 `Underwater`；用户标记为“动植物”的水母、鱼类素材落到 `AnimalsAndPlants`。版权页的 Pixabay 平台声明已存在，授权记录页会按 `published` 条目自动把这 6 条纳入“公开素材 / Pixabay”列表。已将 `PREMIUM_FREE_AERIAL_SOURCE_VERSION` bump 到 `premium-free-aerial-1080p-cos-20260513-80`，更新后会失效旧 Premium 本地缓存。
+
+2026-05-13 用户继续提供 6 条 Pixabay 链接和人工分类，其中 `pixabay-4286600` 是图片页转轻微动效样片，`pixabay-216270` 为水下甲壳动物样片。用户审片后要求删除 `水面晴云`（`pixabay-4286600`）和 `礁间小蟹`（`pixabay-216270`），这两条已删除本地样片，未写入清单、未上传 COS。其余 4 条已追加到 `premium-free-aerial-videos.js`，标记为 `qualityTier: 'published'`，并上传到 `macify-premium/videos/`：
+
+```text
+pixabay-182908
+pixabay-128014
+pixabay-216282
+pixabay-159703
+```
+
+本轮保留条目中，`pixabay-182908`、`pixabay-128014` 按用户“动植物”分类归入 `AnimalsAndPlants`；`pixabay-216282`、`pixabay-159703` 按用户“水下”分类归入 `Underwater`。已刷新本地和远端完整 84 条 `manifest.json` / `manifest.csv`，上传同步显示 4 个新视频上传、80 个历史视频跳过，并逐条验证上述 4 个新 COS 地址为 `200 OK` / `video/mp4`。版权页的 Pixabay 平台声明已存在，授权记录页会按 `published` 条目自动纳入这 4 条。已将 `PREMIUM_FREE_AERIAL_SOURCE_VERSION` bump 到 `premium-free-aerial-1080p-cos-20260513-84`，更新后会失效旧 Premium 本地缓存。
+
+2026-05-13 用户继续提供 9 条 Pixabay 链接和人工分类，其中 `pixabay-64630` 重复出现一次，已去重为 8 条唯一候选。已通过 ImageURLGenerator 的 `/api/pixabay` 代理解析到稳定 `cdn.pixabay.com` large/medium 直链，追加到 `premium-free-aerial-videos.js`。用户审片后回复“继续”，本轮 8 条已标记为 `qualityTier: 'published'`，上传到 `macify-premium/videos/`，并刷新本地和远端完整 92 条 `manifest.json` / `manifest.csv`。上传同步显示 8 个新视频上传、84 个历史视频跳过；已给 92 条 ready 视频补 `public-read` ACL，并逐条验证本轮 8 个 COS 地址为 `200 OK` / `video/mp4`。分类映射：用户“水下”进入 `Underwater`；“动植物”进入 `AnimalsAndPlants`；“化学生物”按当前公开枚举进入 `Motion`；“生活人物”因公开版无该枚举且画面核心为泳池水下波光，暂归 `Underwater` 并在 `subcategories` / `tags` 保留 `Pool` / `Model` / `Reflection`。版权页已补充 Pixabay 平台说明；授权记录页会按 `published` 条目自动纳入“公开素材 / Pixabay”列表。已将 `PREMIUM_FREE_AERIAL_SOURCE_VERSION` bump 到 `premium-free-aerial-1080p-cos-20260514-92`，更新后会失效旧 Premium 本地缓存。
+
+2026-05-14 用户继续提供 9 条 Pixabay 链接和人工分类，其中 `pixabay-183960` 已在 2026-05-12 批次发布，本次不重复写入；`pixabay-316029` 由 Pixabay API 标注为 `isAiGenerated: true` 且 `isLowQuality: true`，按当前审美硬性标准暂不写入候选清单、不生成入库样片。其余 7 条已通过 Pixabay API 解析到稳定 `cdn.pixabay.com` large/medium/small 直链，并以 `qualityTier: 'candidate'` 追加到 `premium-free-aerial-videos.js` 生成本地样片。用户审片和审文案后回复“可以 继续”，本轮 7 条已标记为 `qualityTier: 'published'`，上传到 `macify-premium/videos/`，并刷新本地和远端完整 99 条 `manifest.json` / `manifest.csv`。本轮发布为：
+
+```text
+pixabay-4294
+pixabay-127713
+pixabay-6636
+pixabay-185096
+pixabay-227567
+pixabay-24216
+pixabay-4006
+```
+
+分类映射：用户“动植物”进入 `AnimalsAndPlants`；用户“自然”进入 `Landscapes`；用户“生活人物”的 `pixabay-185096` 因公开版无该枚举且画面核心为海边书页与海岸环境，暂归 `Landscapes` 并在 `subcategories` / `tags` 保留 `Book` / `Literature` / `Beach` / `Ocean`。上传同步显示 7 个新视频上传、92 个历史视频跳过；已给 99 条 ready 视频补 `public-read` ACL，并逐条验证本轮 7 个 COS 地址与远端 `manifest.json` 均为 `200 OK`，视频为 `Content-Type: video/mp4`。版权页的 Pixabay 平台声明已存在，授权记录页会按 `published` 条目自动纳入“公开素材 / Pixabay”列表。已将 `PREMIUM_FREE_AERIAL_SOURCE_VERSION` bump 到 `premium-free-aerial-1080p-cos-20260514-99`，更新后会失效旧 Premium 本地缓存。
 
 继续工作时可以继续找下一批候选。下一次上传 COS 前必须重新向用户索取新的 `COS_SECRET_ID` / `COS_SECRET_KEY`，且只允许上传到 `macify-premium/videos/`。
 
@@ -1956,7 +2083,7 @@ huxizen.com
 video.huxizen.com
 ```
 
-### 备案进展和卡点
+### 备案进展
 
 用户进入腾讯云 ICP 备案流程，选择了：
 
@@ -1968,15 +2095,7 @@ video.huxizen.com
 备案区域: 北京
 ```
 
-备案系统要求选择云资源。用户账号一开始没有可用云资源：
-
-```text
-云服务器: 暂无可选资源
-轻量应用服务器: 暂无可选资源
-备案授权码: 暂无可选资源
-```
-
-曾引导用户购买最低成本备案资源：
+此前备案系统要求选择云资源。用户账号一开始没有可用云资源，曾引导用户购买最低成本备案资源：
 
 ```text
 轻量应用服务器
@@ -1989,20 +2108,24 @@ video.huxizen.com
 自动续费: 建议取消
 ```
 
-重要：本聊天中没有明确确认用户是否已成功支付并创建轻量应用服务器。下一个窗口需要先问一句：
+2026-05-13 用户反馈最新状态：备案已提交腾讯云初审，不再卡在云资源选择或实名认证等待。
 
 ```text
-刚才 105 元轻量应用服务器是否已经支付成功？如果成功，备案页云资源应能选到它；如果没成功，备案暂时不能继续。
+备案订单号: 30177839176900401
+订单类型: 新增服务（原备案不在腾讯云）
+创建时间: 2026-05-10 13:42:49
+当前阶段: 腾讯云审核中
+流程状态:
+1 提交初审: 已提交
+2 腾讯云审核: 审核中
+3 待提交管局: 预计 24 小时
+4 工信部短信核验: 24 小时内核验
+5 管局审核: 1-20 个工作日
 ```
 
-备案还有一个硬性卡点：
+审核说明：腾讯云将在 1-2 个工作日内给李慧（手机号 `136****7633`、`135****2101`）致电。第一次未接通 1 小时内会再次拨打，两次均未接通会导致驳回。用户需要把审核电话加入通讯录或临时关闭骚扰拦截。
 
-```text
-腾讯云提示：账号实名认证 24 小时后才可进行备案
-可继续备案时间: 2026-05-11 13:22:35 后
-```
-
-所以备案/CDN 正式域名接入需要等到该时间之后继续。
+下一步：等待腾讯云审核电话和初审结论；初审通过后立刻完成工信部短信核验；之后等待管局审核。备案通过前 CDN 域名 `video.huxizen.com` 不能作为正式小程序视频域名。
 
 ### 已创建 CAM 子用户和上传密钥
 

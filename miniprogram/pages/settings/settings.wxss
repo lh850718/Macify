@@ -111,6 +111,114 @@
   line-height: 78rpx;
 }
 
+.breath-rhythm-block {
+  border-top: 1rpx solid rgba(21, 34, 43, 0.07);
+  padding: 20rpx 0 24rpx;
+}
+
+.rhythm-formula {
+  margin-top: 16rpx;
+  display: grid;
+  grid-template-rows: 28rpx 62rpx;
+  align-items: center;
+  column-gap: 6rpx;
+}
+
+.rhythm-compact-input {
+  width: 68rpx;
+  height: 62rpx;
+  padding: 0;
+  box-sizing: border-box;
+  border: 1rpx solid rgba(31, 67, 78, 0.1);
+  border-radius: 14rpx;
+  background: #f6faf9;
+  color: #15222b;
+  font-size: 26rpx;
+  font-weight: 650;
+  line-height: 62rpx;
+  text-align: center;
+}
+
+.rhythm-default-formula {
+  grid-template-columns: 68rpx 24rpx 68rpx 24rpx 68rpx 24rpx 68rpx 28rpx;
+}
+
+.rhythm-custom-formula {
+  grid-template-columns: 64rpx 22rpx 64rpx 22rpx 64rpx 22rpx 64rpx 46rpx 64rpx 24rpx;
+}
+
+.rhythm-custom-formula .rhythm-compact-input {
+  width: 64rpx;
+}
+
+.rhythm-label-cell {
+  color: #70808a;
+  font-size: 22rpx;
+  font-weight: 650;
+  line-height: 28rpx;
+  text-align: center;
+}
+
+.rhythm-separator {
+  color: #9ca9b1;
+  font-size: 20rpx;
+  font-weight: 650;
+  line-height: 62rpx;
+  text-align: center;
+}
+
+.rhythm-unit-tail {
+  flex: 0 0 auto;
+  color: #87939c;
+  font-size: 21rpx;
+  font-weight: 560;
+  line-height: 62rpx;
+}
+
+.rhythm-cell-1 {
+  grid-column: 1;
+}
+
+.rhythm-cell-2 {
+  grid-column: 2;
+}
+
+.rhythm-cell-3 {
+  grid-column: 3;
+}
+
+.rhythm-cell-4 {
+  grid-column: 4;
+}
+
+.rhythm-cell-5 {
+  grid-column: 5;
+}
+
+.rhythm-cell-6 {
+  grid-column: 6;
+}
+
+.rhythm-cell-7 {
+  grid-column: 7;
+}
+
+.rhythm-cell-8 {
+  grid-column: 8;
+}
+
+.rhythm-cell-9 {
+  grid-column: 9;
+}
+
+.rhythm-cell-10 {
+  grid-column: 10;
+}
+
+.rhythm-input-line {
+  grid-row: 2;
+}
+
 .unit-segment {
   min-height: 82rpx;
   border-top: 1rpx solid rgba(21, 34, 43, 0.07);

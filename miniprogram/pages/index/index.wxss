@@ -29,6 +29,10 @@
   background: #05070a;
 }
 
+.aerial-video-looping {
+  transition-duration: 3000ms;
+}
+
 .aerial-video-active {
   z-index: 1;
   opacity: 1;
@@ -39,12 +43,24 @@
   opacity: 0;
 }
 
+.aerial-video-loop-revealing {
+  z-index: 2;
+  opacity: 1;
+}
+
 .transition-poster {
   box-shadow: inset 0 0 160rpx rgba(0, 0, 0, 0.3);
 }
 
 .transition-poster-revealing {
   opacity: 0;
+}
+
+.video-only-hitarea {
+  position: fixed;
+  inset: 0;
+  z-index: 7;
+  background: transparent;
 }
 
 .shade {
@@ -455,8 +471,8 @@
   text-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.55);
 }
 
-.refresh-button {
-  font-size: 32rpx;
+.quote-button {
+  font-size: 38rpx;
 }
 
 .dots-button {

@@ -5,10 +5,9 @@ const {
   toggleFavoriteVideo,
 } = require('../../utils/storage.js');
 const { pickQuote } = require('../../utils/quotes.js');
-const { pickVideo, videoById } = require('../../utils/videos.js');
-const { cacheVideo, cachedVideoForSettings } = require('../../utils/video-cache.js');
+const { shuffledVideoQueue, videoById } = require('../../utils/videos.js');
+const { cachedVideoForSettings, cacheVideo } = require('../../utils/video-cache.js');
 const { getForecast, describeWeather } = require('../../utils/weather.js');
-const videoIntros = require('../../data/video-intros.js');
 
 const BREATH_PHASE_MS = 5000;
 const HAPTIC_LEAD_MS = 850;
@@ -18,6 +17,12 @@ const ZEN_AUDIO_FALLBACK_DURATION_MS = 63384;
 const ZEN_AUDIO_CROSSFADE_MS = 2200;
 const ZEN_AUDIO_FADE_STEP_MS = 100;
 const VIDEO_REVEAL_MS = 520;
+const VIDEO_LOOP_CROSSFADE_MS = 3000;
+const VIDEO_LOOP_PRELOAD_LEAD_MS = 3500;
+const SWIPE_MIN_DISTANCE = 54;
+const SWIPE_AXIS_RATIO = 1.35;
+const SWIPE_MAX_DURATION_MS = 1100;
+const VIDEO_ONLY_TAP_GUARD_MS = 450;
 const FAVORITE_TOAST_TEXT = '已经收藏，可以在设置页选择收藏分类播放收藏视频';
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const HAPTIC_PATTERNS = {
@@ -115,6 +120,10 @@ function slotReadyKey(slot) {
   return slot === 'b' ? 'videoSlotBReady' : 'videoSlotAReady';
 }
 
+function slotElementId(slot) {
+  return slot === 'b' ? 'aerialVideoB' : 'aerialVideoA';
+}
+
 function sameVideo(left, right) {
   return left
     && right
@@ -136,9 +145,13 @@ function windowWidth() {
   }
 }
 
+function primaryTouchFromEvent(event) {
+  return event
+    && ((event.changedTouches && event.changedTouches[0]) || (event.touches && event.touches[0]));
+}
+
 function touchPointFromEvent(event, fallbackSide) {
-  const touch = event
-    && ((event.touches && event.touches[0]) || (event.changedTouches && event.changedTouches[0]));
+  const touch = primaryTouchFromEvent(event);
   const width = windowWidth();
   return {
     x: touch && typeof touch.clientX === 'number' ? touch.clientX : fallbackSide === 'right' ? width - 32 : 32,
@@ -180,10 +193,7 @@ function playbackSettingsKey(settings) {
     settings.videoSource,
     settings.videoLibrary,
     settings.shuffleScope,
-    settings.liteVideoBase,
     settings.premiumFreeAerialVideoBase,
-    settings.reverseProxy ? 'proxy' : 'direct',
-    settings.proxyBase,
   ].join('|');
 }
 
@@ -212,13 +222,25 @@ Page({
     incomingVideoSlot: '',
     videoTransitionPoster: '',
     videoTransitionStage: 'idle',
+    videoLoopCrossfading: false,
+    videoLoopRevealing: false,
     videoFallbackUsed: false,
+    videoOnlyActive: false,
     zenActive: false,
     zenHintText: '',
     videoError: '',
   },
 
   onLoad() {
+    this.lastVideo = null;
+    this.forwardVideo = null;
+    this.videoQueue = [];
+    this.videoQueueKey = '';
+    this.screenTouchStart = null;
+    this.videoOnlyEnteredAt = 0;
+    this.videoLoopPending = false;
+    this.videoLoopIncomingSlot = '';
+    this.videoLoopPlaybackStarted = false;
     this.loadSettingsAndContent();
     this.startClock();
   },
@@ -231,6 +253,8 @@ Page({
     if (this.clockTimer) clearInterval(this.clockTimer);
     this.abortVideoCacheDownload();
     this.clearVideoTransitionTimer();
+    this.clearVideoLoopState();
+    this.clearVideoMessageTimer();
     this.stopZenCues();
   },
 
@@ -239,10 +263,69 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.nextVideo();
-    this.nextQuote();
+    this.previousVideo();
     this.loadWeather();
     wx.stopPullDownRefresh();
+  },
+
+  onScreenTouchStart(event) {
+    const touch = primaryTouchFromEvent(event);
+    if (!touch) return;
+    this.screenTouchStart = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+    };
+  },
+
+  onScreenTouchEnd(event) {
+    const start = this.screenTouchStart;
+    this.screenTouchStart = null;
+
+    if (!start || this.data.weatherVisible || this.data.videoIntroVisible) return;
+
+    const touch = primaryTouchFromEvent(event);
+    if (!touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+    const elapsed = Date.now() - start.time;
+
+    if (elapsed > SWIPE_MAX_DURATION_MS) return;
+    if (absY < SWIPE_MIN_DISTANCE || absY < absX * SWIPE_AXIS_RATIO) return;
+
+    if (deltaY < 0) {
+      this.nextVideo({ rememberPrevious: true, preferForward: true });
+    } else {
+      this.previousVideo();
+    }
+  },
+
+  onScreenTouchCancel() {
+    this.screenTouchStart = null;
+  },
+
+  onScreenLongPress() {
+    if (this.data.videoOnlyActive || this.data.zenActive || this.data.weatherVisible || this.data.videoIntroVisible) return;
+    this.screenTouchStart = null;
+    this.videoOnlyEnteredAt = Date.now();
+    vibrateShort('medium');
+    this.setData({
+      videoOnlyActive: true,
+      weatherVisible: false,
+      videoIntroVisible: false,
+      videoError: '',
+    });
+  },
+
+  onScreenTap() {
+    if (!this.data.videoOnlyActive) return;
+    if (Date.now() - this.videoOnlyEnteredAt < VIDEO_ONLY_TAP_GUARD_MS) return;
+    this.setData({
+      videoOnlyActive: false,
+    });
   },
 
   startClock() {
@@ -270,7 +353,12 @@ Page({
       },
       () => {
         if (!this.data.currentVideo) this.restoreCachedOrNextVideo();
-        else if (playbackChanged) this.nextVideo();
+        else if (playbackChanged) {
+          this.lastVideo = null;
+          this.forwardVideo = null;
+          this.resetVideoQueue();
+          this.nextVideo({ rememberPrevious: false });
+        }
         if (!this.data.currentQuote) this.nextQuote();
         this.loadWeather();
         if (this.data.zenActive && !this.zenPhaseTimer) {
@@ -284,13 +372,25 @@ Page({
     const current = this.data.currentVideo;
     const activeSlot = this.data.activeVideoSlot || 'a';
     const shouldTransition = current && next && current.url && next.url && !sameVideo(current, next);
+    if (options.clearPrevious) {
+      this.lastVideo = null;
+    } else if (options.rememberPrevious && current && next && !sameVideo(current, next)) {
+      this.lastVideo = current;
+    }
+    if (options.clearForward) {
+      this.forwardVideo = null;
+    }
+    this.clearVideoLoopState();
+    this.clearVideoMessageTimer();
     const videoData = {
       currentVideo: next,
-      currentVideoIntro: next ? next.description || videoIntros[next.originalName || next.name] || '' : '',
+      currentVideoIntro: next ? next.description || '' : '',
       currentVideoFavorited: next ? isFavoriteVideo(next) : false,
       videoIntroVisible: false,
       videoReady: false,
       videoFallbackUsed: false,
+      videoLoopCrossfading: false,
+      videoLoopRevealing: false,
       videoError: next && next.warning ? next.warning : '',
     };
     const afterVideoSet = () => {
@@ -310,6 +410,8 @@ Page({
         incomingVideoSlot: '',
         videoTransitionPoster: '',
         videoTransitionStage: 'idle',
+        videoLoopCrossfading: false,
+        videoLoopRevealing: false,
       });
       return;
     }
@@ -337,6 +439,8 @@ Page({
       incomingVideoSlot: '',
       videoTransitionPoster: '',
       videoTransitionStage: 'idle',
+      videoLoopCrossfading: false,
+      videoLoopRevealing: false,
     }, afterVideoSet);
   },
 
@@ -347,27 +451,91 @@ Page({
     }
   },
 
-  activateIncomingVideo(slot) {
+  clearVideoLoopState() {
+    this.videoLoopPending = false;
+    this.videoLoopIncomingSlot = '';
+    this.videoLoopPlaybackStarted = false;
+  },
+
+  videoContextForSlot(slot) {
+    if (!wx.createVideoContext) return null;
+    try {
+      return wx.createVideoContext(slotElementId(slot), this);
+    } catch (error) {
+      console.warn('Video context create failed:', error);
+      return null;
+    }
+  },
+
+  playVideoSlot(slot) {
+    const context = this.videoContextForSlot(slot);
+    if (!context || !context.play) return;
+    try {
+      if (context.seek) context.seek(0);
+      context.play();
+    } catch (error) {
+      console.warn('Video play failed:', error);
+    }
+  },
+
+  activateIncomingVideo(slot, options = {}) {
     const previousSlot = this.data.activeVideoSlot || 'a';
+    const isLoopCrossfade = !!options.loopCrossfade;
+    const revealMs = isLoopCrossfade ? VIDEO_LOOP_CROSSFADE_MS : VIDEO_REVEAL_MS;
     this.clearVideoTransitionTimer();
+    if (isLoopCrossfade) {
+      this.videoLoopPlaybackStarted = true;
+      this.setData({
+        videoReady: true,
+        [slotReadyKey(slot)]: true,
+        videoTransitionStage: 'idle',
+        videoLoopCrossfading: true,
+        videoLoopRevealing: true,
+      }, () => {
+        this.videoTransitionTimer = setTimeout(() => {
+          const staleSlot = previousSlot === slot ? otherVideoSlot(slot) : previousSlot;
+          this.setData({
+            activeVideoSlot: slot,
+            incomingVideoSlot: '',
+            [slotVideoKey(staleSlot)]: null,
+            [slotReadyKey(staleSlot)]: false,
+            videoTransitionPoster: '',
+            videoTransitionStage: 'idle',
+            videoLoopCrossfading: false,
+            videoLoopRevealing: false,
+          });
+          this.clearVideoLoopState();
+          this.videoTransitionTimer = null;
+        }, revealMs);
+      });
+      return;
+    }
 
     this.setData({
       activeVideoSlot: slot,
       incomingVideoSlot: '',
       videoReady: true,
       [slotReadyKey(slot)]: true,
-      videoTransitionStage: 'revealing',
+      videoTransitionStage: isLoopCrossfade ? 'idle' : 'revealing',
+      videoLoopCrossfading: isLoopCrossfade,
+      videoLoopRevealing: isLoopCrossfade,
     }, () => {
       this.videoTransitionTimer = setTimeout(() => {
         const staleSlot = previousSlot === slot ? otherVideoSlot(slot) : previousSlot;
-        this.setData({
+        const updates = {
           [slotVideoKey(staleSlot)]: null,
           [slotReadyKey(staleSlot)]: false,
           videoTransitionPoster: '',
           videoTransitionStage: 'idle',
-        });
+        };
+        if (isLoopCrossfade) {
+          this.clearVideoLoopState();
+          updates.videoLoopCrossfading = false;
+          updates.videoLoopRevealing = false;
+        }
+        this.setData(updates);
         this.videoTransitionTimer = null;
-      }, VIDEO_REVEAL_MS);
+      }, revealMs);
     });
   },
 
@@ -378,7 +546,9 @@ Page({
   onVideoPlay(event) {
     const slot = event.currentTarget.dataset.slot || 'a';
     if (slot === this.data.incomingVideoSlot) {
-      this.activateIncomingVideo(slot);
+      this.activateIncomingVideo(slot, {
+        loopCrossfade: this.videoLoopPending && slot === this.videoLoopIncomingSlot,
+      });
       return;
     }
 
@@ -390,6 +560,7 @@ Page({
 
   onVideoError(error) {
     console.warn('Video load failed:', error);
+    this.clearVideoMessageTimer();
     const slot = error.currentTarget && error.currentTarget.dataset
       ? error.currentTarget.dataset.slot || this.data.activeVideoSlot || 'a'
       : this.data.activeVideoSlot || 'a';
@@ -398,7 +569,6 @@ Page({
     const failedVideo = this.videoForSlot(slot) || this.data.currentVideo;
 
     if (failedVideo && failedVideo.fallbackUrl && !this.data.videoFallbackUsed) {
-      const isPremium = failedVideo.videoLibrary === 'premiumFreeAerial';
       const fallbackVideo = {
         ...failedVideo,
         url: failedVideo.fallbackUrl,
@@ -410,7 +580,7 @@ Page({
         [slotReadyKey(slot)]: false,
         videoReady: slot === this.data.activeVideoSlot ? false : this.data.videoReady,
         videoFallbackUsed: true,
-        videoError: isPremium ? '高端免费航拍加载失败，正在尝试源站回退' : '轻量视频加载失败，正在回退 Apple 1080 源',
+        videoError: '背景视频加载失败，正在尝试源站回退',
       });
       return;
     }
@@ -418,23 +588,101 @@ Page({
     this.setData({
       videoError: '视频加载失败，已切换下一条',
     });
-    setTimeout(() => this.nextVideo(), 700);
+    setTimeout(() => this.nextVideo({ rememberPrevious: false }), 700);
+  },
+
+  onVideoTimeUpdate(event) {
+    const slot = event.currentTarget.dataset.slot || 'a';
+    if (slot !== this.data.activeVideoSlot || this.data.incomingVideoSlot) return;
+    const detail = event.detail || {};
+    const currentTime = Number(detail.currentTime);
+    const duration = Number(detail.duration);
+    if (!Number.isFinite(currentTime) || !Number.isFinite(duration) || duration <= 3) return;
+
+    const remainingMs = Math.max(0, (duration - currentTime) * 1000);
+    if (remainingMs > VIDEO_LOOP_PRELOAD_LEAD_MS) return;
+    this.prepareLoopCrossfade(slot);
+  },
+
+  prepareLoopCrossfade(activeSlot) {
+    if (this.videoLoopPending || this.data.incomingVideoSlot) return;
+    if (activeSlot !== this.data.activeVideoSlot) return;
+    const current = this.videoForSlot(activeSlot) || this.data.currentVideo;
+    if (!current || !current.url) return;
+
+    const incomingSlot = otherVideoSlot(activeSlot);
+    this.videoLoopPending = true;
+    this.videoLoopIncomingSlot = incomingSlot;
+    this.setData({
+      [slotVideoKey(incomingSlot)]: {
+        ...current,
+        loopInstance: Date.now(),
+      },
+      [slotReadyKey(incomingSlot)]: false,
+      incomingVideoSlot: incomingSlot,
+      videoLoopCrossfading: true,
+      videoLoopRevealing: false,
+      videoTransitionPoster: '',
+      videoTransitionStage: 'idle',
+    }, () => {
+      this.playVideoSlot(incomingSlot);
+    });
   },
 
   restoreCachedOrNextVideo() {
-    const settings = this.data.settings && this.data.settings.city ? this.data.settings : getSettings();
-    const cached = cachedVideoForSettings(settings, (candidateSettings, id) => videoById(candidateSettings, id));
-    if (cached) {
-      this.setCurrentVideo(cached, { skipCache: true });
-      return;
-    }
-    this.nextVideo();
+    this.nextVideo({ rememberPrevious: false });
   },
 
-  nextVideo() {
+  resetVideoQueue() {
+    this.videoQueue = [];
+    this.videoQueueKey = '';
+  },
+
+  ensureVideoQueue(settings, currentId) {
+    const key = playbackSettingsKey(settings);
+    if (this.videoQueueKey !== key || !Array.isArray(this.videoQueue) || !this.videoQueue.length) {
+      this.videoQueue = shuffledVideoQueue(settings, currentId);
+      this.videoQueueKey = key;
+    }
+  },
+
+  takeQueuedVideo(settings, currentId) {
+    this.ensureVideoQueue(settings, currentId);
+    if (!this.videoQueue.length) return null;
+
+    let next = this.videoQueue.shift();
+    if (next && currentId && next.id === currentId && this.videoQueue.length) {
+      this.videoQueue.push(next);
+      next = this.videoQueue.shift();
+    }
+    return next || null;
+  },
+
+  cachedVersionOf(settings, video) {
+    if (!video) return null;
+    return cachedVideoForSettings(settings, (candidateSettings, cachedId) => {
+      if (cachedId !== video.id) return null;
+      return videoById(candidateSettings, cachedId);
+    });
+  },
+
+  nextVideo(options = {}) {
+    this.clearVideoMessageTimer();
+
+    if (options.preferForward && this.forwardVideo) {
+      const forward = this.forwardVideo;
+      this.setCurrentVideo(forward, {
+        rememberPrevious: options.rememberPrevious !== false,
+        clearForward: true,
+      });
+      return;
+    }
+
+    this.forwardVideo = null;
     const settings = this.data.settings && this.data.settings.city ? this.data.settings : getSettings();
     const currentId = this.data.currentVideo && this.data.currentVideo.id;
-    const next = pickVideo(settings, currentId);
+    const queued = this.takeQueuedVideo(settings, currentId);
+    const next = this.cachedVersionOf(settings, queued) || queued;
     if (!next) {
       this.setData({
         videoError: settings.shuffleScope === 'favorites'
@@ -443,7 +691,36 @@ Page({
       });
       return;
     }
-    this.setCurrentVideo(next);
+    this.setCurrentVideo(next, {
+      rememberPrevious: options.rememberPrevious !== false,
+    });
+  },
+
+  previousVideo() {
+    const previous = this.lastVideo;
+    if (!previous) {
+      this.showVideoMessage('没有上一条视频');
+      return;
+    }
+    const current = this.data.currentVideo;
+    this.forwardVideo = current && !sameVideo(current, previous) ? current : null;
+    this.setCurrentVideo(previous, { clearPrevious: true });
+  },
+
+  clearVideoMessageTimer() {
+    if (this.videoMessageTimer) {
+      clearTimeout(this.videoMessageTimer);
+      this.videoMessageTimer = null;
+    }
+  },
+
+  showVideoMessage(text, duration = 1500) {
+    this.clearVideoMessageTimer();
+    this.setData({ videoError: text });
+    this.videoMessageTimer = setTimeout(() => {
+      this.setData({ videoError: '' });
+      this.videoMessageTimer = null;
+    }, duration);
   },
 
   abortVideoCacheDownload() {
@@ -458,7 +735,7 @@ Page({
     const settings = this.data.settings && this.data.settings.city ? this.data.settings : getSettings();
     this.abortVideoCacheDownload();
 
-    const token = `${video.videoLibrary || 'apple'}:${video.id}:${Date.now()}`;
+    const token = `${video.videoLibrary || 'premiumFreeAerial'}:${video.id}:${Date.now()}`;
     this.videoCacheToken = token;
     this.videoCacheDownloadTask = cacheVideo(settings, video, {
       success: (meta) => {
@@ -557,6 +834,9 @@ Page({
   toggleFavorite() {
     if (!this.data.currentVideo) return;
     const result = toggleFavoriteVideo(this.data.currentVideo);
+    if (this.data.settings && this.data.settings.shuffleScope === 'favorites') {
+      this.resetVideoQueue();
+    }
     this.setData({
       currentVideoFavorited: result.favorited,
     });
@@ -826,8 +1106,17 @@ Page({
     this.zenAudioPlayers = (this.zenAudioPlayers || []).filter((item) => item !== audio);
   },
 
-  onVideoEnded() {
-    // Keep the user's current background unless they explicitly switch videos.
+  onVideoEnded(event) {
+    const slot = event && event.currentTarget && event.currentTarget.dataset
+      ? event.currentTarget.dataset.slot || 'a'
+      : this.data.activeVideoSlot || 'a';
+    if (slot !== this.data.activeVideoSlot) return;
+
+    if (this.data.incomingVideoSlot && this.videoLoopPending) {
+      if (!this.videoLoopPlaybackStarted) this.playVideoSlot(this.data.incomingVideoSlot);
+      return;
+    }
+    this.prepareLoopCrossfade(slot);
   },
 
   openSettings() {

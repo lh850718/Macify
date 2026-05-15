@@ -1,4 +1,11 @@
-<view class="screen">
+<view
+  class="screen"
+  bindtouchstart="onScreenTouchStart"
+  bindtouchend="onScreenTouchEnd"
+  bindtouchcancel="onScreenTouchCancel"
+  bindlongpress="onScreenLongPress"
+  bindtap="onScreenTap"
+>
   <image
     wx:if="{{!videoTransitionPoster && !videoReady && currentVideo && currentVideo.poster}}"
     class="poster loading-poster"
@@ -15,57 +22,63 @@
 
   <video
     wx:if="{{videoSlotA && videoSlotA.url}}"
+    id="aerialVideoA"
     data-slot="a"
-    class="aerial-video {{activeVideoSlot === 'a' ? 'aerial-video-active' : ''}} {{incomingVideoSlot === 'a' ? 'aerial-video-incoming' : ''}}"
+    class="aerial-video {{videoLoopCrossfading ? 'aerial-video-looping' : ''}} {{activeVideoSlot === 'a' ? 'aerial-video-active' : ''}} {{incomingVideoSlot === 'a' ? 'aerial-video-incoming' : ''}} {{videoLoopRevealing && incomingVideoSlot === 'a' ? 'aerial-video-loop-revealing' : ''}}"
     src="{{videoSlotA.url}}"
     poster="{{videoSlotA.poster}}"
     autoplay="{{true}}"
     muted="{{true}}"
     controls="{{false}}"
-    loop="{{true}}"
+    loop="{{false}}"
     show-center-play-btn="{{false}}"
     show-play-btn="{{false}}"
     enable-progress-gesture="{{false}}"
     object-fit="cover"
     bindplay="onVideoPlay"
+    bindtimeupdate="onVideoTimeUpdate"
     bindended="onVideoEnded"
     binderror="onVideoError"
   />
 
   <video
     wx:if="{{videoSlotB && videoSlotB.url}}"
+    id="aerialVideoB"
     data-slot="b"
-    class="aerial-video {{activeVideoSlot === 'b' ? 'aerial-video-active' : ''}} {{incomingVideoSlot === 'b' ? 'aerial-video-incoming' : ''}}"
+    class="aerial-video {{videoLoopCrossfading ? 'aerial-video-looping' : ''}} {{activeVideoSlot === 'b' ? 'aerial-video-active' : ''}} {{incomingVideoSlot === 'b' ? 'aerial-video-incoming' : ''}} {{videoLoopRevealing && incomingVideoSlot === 'b' ? 'aerial-video-loop-revealing' : ''}}"
     src="{{videoSlotB.url}}"
     poster="{{videoSlotB.poster}}"
     autoplay="{{true}}"
     muted="{{true}}"
     controls="{{false}}"
-    loop="{{true}}"
+    loop="{{false}}"
     show-center-play-btn="{{false}}"
     show-play-btn="{{false}}"
     enable-progress-gesture="{{false}}"
     object-fit="cover"
     bindplay="onVideoPlay"
+    bindtimeupdate="onVideoTimeUpdate"
     bindended="onVideoEnded"
     binderror="onVideoError"
   />
 
-  <view class="shade"></view>
+  <view class="video-only-hitarea" wx:if="{{videoOnlyActive}}" catchtap="onScreenTap"></view>
 
-  <view class="topbar" wx:if="{{!zenActive}}">
+  <view class="shade" wx:if="{{!videoOnlyActive}}"></view>
+
+  <view class="topbar" wx:if="{{!zenActive && !videoOnlyActive}}">
     <view wx:if="{{settings.showVideoMeta && currentVideo}}" class="meta" bindtap="openVideoIntro">
       <text class="meta-title">{{currentVideo.name}}</text>
       <view class="meta-line"></view>
     </view>
 
-    <view wx:if="{{settings.showWeather && forecast}}" class="weather glass" bindtap="toggleWeather">
+    <view wx:if="{{settings.showWeather && forecast}}" class="weather" bindtap="toggleWeather">
       <text class="weather-temp">{{forecast.current.temperature}}°</text>
       <text class="weather-copy">{{weatherLabel}} · {{forecast.location}}</text>
     </view>
   </view>
 
-  <view class="center" wx:if="{{!zenActive}}">
+  <view class="center" wx:if="{{!zenActive && !videoOnlyActive}}">
     <view wx:if="{{settings.showClock}}" class="clock-wrap">
       <text class="clock">{{clock}}</text>
       <text class="date">{{dateText}}</text>
@@ -77,7 +90,7 @@
     </view>
   </view>
 
-  <view class="zen-stage" wx:if="{{zenActive}}">
+  <view class="zen-stage" wx:if="{{zenActive && !videoOnlyActive}}">
     <view class="breath-stage">
       <view class="breath-rotor">
         <view class="breath-flower">
@@ -108,17 +121,17 @@
     <view class="zen-exit" bindtap="exitZen">‹</view>
   </view>
 
-  <view class="zen-entry" wx:if="{{!zenActive}}" bindtap="enterZen" aria-label="冥想">
+  <view class="zen-entry" wx:if="{{!zenActive && !videoOnlyActive}}" bindtap="enterZen" aria-label="冥想">
     <image class="zen-entry-icon" src="/assets/zazen-line.svg" mode="aspectFit" />
   </view>
 
-  <view class="bottom-actions" wx:if="{{!zenActive}}">
-    <view class="icon-button refresh-button" bindtap="nextVideo">↻</view>
+  <view class="bottom-actions" wx:if="{{!zenActive && !videoOnlyActive}}">
+    <view class="icon-button quote-button" bindtap="nextQuote" aria-label="切换名言">“</view>
     <view class="icon-button dots-button" bindtap="openSettings">···</view>
   </view>
 
-  <view class="popover-mask" wx:if="{{weatherVisible}}" bindtap="closeWeather"></view>
-  <view class="weather-popover anchored-popover glass" wx:if="{{weatherVisible}}" style="{{weatherPopoverStyle}}">
+  <view class="popover-mask" wx:if="{{weatherVisible && !videoOnlyActive}}" bindtap="closeWeather"></view>
+  <view class="weather-popover anchored-popover glass" wx:if="{{weatherVisible && !videoOnlyActive}}" style="{{weatherPopoverStyle}}">
     <view class="popover-header">
       <view>
         <text class="popover-title">{{forecast.location}}</text>
@@ -165,8 +178,8 @@
     </scroll-view>
   </view>
 
-  <view class="popover-mask" wx:if="{{videoIntroVisible}}" bindtap="closeVideoIntro"></view>
-  <view class="video-intro-popover anchored-popover glass" wx:if="{{videoIntroVisible}}" style="{{videoIntroPopoverStyle}}">
+  <view class="popover-mask" wx:if="{{videoIntroVisible && !videoOnlyActive}}" bindtap="closeVideoIntro"></view>
+  <view class="video-intro-popover anchored-popover glass" wx:if="{{videoIntroVisible && !videoOnlyActive}}" style="{{videoIntroPopoverStyle}}">
     <view class="popover-header">
       <view>
         <text class="popover-title">{{currentVideo.name}}</text>
@@ -180,5 +193,5 @@
     </view>
   </view>
 
-  <view wx:if="{{videoError}}" class="toast glass">{{videoError}}</view>
+  <view wx:if="{{videoError && !videoOnlyActive}}" class="toast glass">{{videoError}}</view>
 </view>

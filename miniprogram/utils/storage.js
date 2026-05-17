@@ -33,7 +33,7 @@ const PUBLIC_SHUFFLE_SCOPES = Object.freeze([
 ]);
 
 const DEFAULT_SETTINGS = Object.freeze({
-  city: 'Shanghai',
+  city: '北京',
   tempUnit: 'celsius',
   showClock: true,
   showWeather: true,
@@ -103,6 +103,7 @@ function normalizeSettings(raw) {
   // installs normalized so they cannot keep playing removed source modes.
   settings.videoLibrary = DEFAULT_VIDEO_LIBRARY;
   settings.videoSource = 'lite';
+  settings.city = String(settings.city || '').trim() || DEFAULT_SETTINGS.city;
   if (!raw || raw.shuffleScopeVersion !== SHUFFLE_SCOPE_VERSION) {
     settings.shuffleScope = 'all';
     settings.shuffleScopeVersion = SHUFFLE_SCOPE_VERSION;

@@ -42,7 +42,8 @@ const SWIPE_MIN_DISTANCE = 54;
 const SWIPE_AXIS_RATIO = 1.35;
 const SWIPE_MAX_DURATION_MS = 1100;
 const VIDEO_ONLY_TAP_GUARD_MS = 450;
-const FAVORITE_TOAST_TEXT = '已经收藏，可以在设置页选择收藏分类播放收藏视频';
+const DOUBLE_TAP_MAX_MS = 280;
+const TAP_AFTER_SWIPE_GUARD_MS = 360;
 const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const HAPTIC_PATTERNS = {
   inhale: [
@@ -273,11 +274,17 @@ Page({
     dateText: '',
     forecast: null,
     weatherLabel: '',
+    weatherLoading: false,
+    weatherError: '',
+    weatherCardTemp: '',
+    weatherCardText: '',
+    weatherCardMuted: false,
     weatherVisible: false,
     weatherDaily: [],
     videoIntroVisible: false,
     currentVideoIntro: null,
     currentVideoFavorited: false,
+    favoriteHintText: '',
     weatherPopoverStyle: '',
     videoIntroPopoverStyle: '',
     videoReady: false,
@@ -310,12 +317,15 @@ Page({
     videoError: '',
   },
 
-  onLoad() {
-    this.lastVideo = null;
-    this.forwardVideo = null;
+  onLoad(options = {}) {
+    this.pendingEnterZen = options && options.mode === 'zen';
+    this.playbackSequence = [];
+    this.playbackIndex = -1;
     this.videoQueue = [];
     this.videoQueueKey = '';
     this.screenTouchStart = null;
+    this.lastScreenTapAt = 0;
+    this.lastSwipeAt = 0;
     this.videoOnlyEnteredAt = 0;
     this.videoLoopPending = false;
     this.videoLoopIncomingSlot = '';
@@ -338,6 +348,8 @@ Page({
     this.clearVideoTransitionTimer();
     this.clearVideoLoopState();
     this.clearVideoMessageTimer();
+    this.clearFavoriteHintTimer();
+    this.clearScreenTapTimer();
     this.stopAmbientAudio();
     this.stopZenCues();
   },
@@ -379,8 +391,14 @@ Page({
     const elapsed = Date.now() - start.time;
 
     if (elapsed > SWIPE_MAX_DURATION_MS) return;
+    if (absX >= SWIPE_MIN_DISTANCE && absX >= absY * SWIPE_AXIS_RATIO) {
+      this.handleHorizontalSwipe(deltaX);
+      return;
+    }
+
     if (absY < SWIPE_MIN_DISTANCE || absY < absX * SWIPE_AXIS_RATIO) return;
 
+    this.markSwipeHandled();
     if (deltaY < 0) {
       this.nextVideo({ rememberPrevious: true, preferForward: true });
     } else {
@@ -392,7 +410,69 @@ Page({
     this.screenTouchStart = null;
   },
 
-  onScreenLongPress() {
+  markSwipeHandled() {
+    this.lastSwipeAt = Date.now();
+    this.clearScreenTapTimer();
+    this.lastScreenTapAt = 0;
+  },
+
+  handleHorizontalSwipe(deltaX) {
+    this.markSwipeHandled();
+    if (this.data.videoOnlyActive) return;
+    if (deltaX > 0) {
+      if (this.data.zenActive) this.exitZen();
+      else this.enterZen();
+      return;
+    }
+    this.openSettings(this.data.zenActive ? 'zen' : 'home');
+  },
+
+  isScreenTapEvent(event) {
+    const dataset = event && event.target && event.target.dataset;
+    return !!(dataset && dataset.screenTap);
+  },
+
+  clearScreenTapTimer() {
+    if (this.screenTapTimer) {
+      clearTimeout(this.screenTapTimer);
+      this.screenTapTimer = null;
+    }
+  },
+
+  onScreenTap(event) {
+    if (!this.isScreenTapEvent(event)) return;
+    if (Date.now() - this.lastSwipeAt < TAP_AFTER_SWIPE_GUARD_MS) return;
+
+    const now = Date.now();
+    if (this.lastScreenTapAt && now - this.lastScreenTapAt <= DOUBLE_TAP_MAX_MS) {
+      this.clearScreenTapTimer();
+      this.lastScreenTapAt = 0;
+      this.toggleFavoriteFromGesture();
+      return;
+    }
+
+    this.lastScreenTapAt = now;
+    this.clearScreenTapTimer();
+    this.screenTapTimer = setTimeout(() => {
+      this.screenTapTimer = null;
+      this.lastScreenTapAt = 0;
+      this.handleSingleScreenTap();
+    }, DOUBLE_TAP_MAX_MS);
+  },
+
+  handleSingleScreenTap() {
+    if (this.data.weatherVisible || this.data.videoIntroVisible || this.data.zenActive) return;
+    if (this.data.videoOnlyActive) {
+      if (Date.now() - this.videoOnlyEnteredAt < VIDEO_ONLY_TAP_GUARD_MS) return;
+      this.setData({
+        videoOnlyActive: false,
+      });
+      return;
+    }
+    this.enterVideoOnly();
+  },
+
+  enterVideoOnly() {
     if (this.data.videoOnlyActive || this.data.zenActive || this.data.weatherVisible || this.data.videoIntroVisible) return;
     this.screenTouchStart = null;
     this.videoOnlyEnteredAt = Date.now();
@@ -402,14 +482,6 @@ Page({
       weatherVisible: false,
       videoIntroVisible: false,
       videoError: '',
-    });
-  },
-
-  onScreenTap() {
-    if (!this.data.videoOnlyActive) return;
-    if (Date.now() - this.videoOnlyEnteredAt < VIDEO_ONLY_TAP_GUARD_MS) return;
-    this.setData({
-      videoOnlyActive: false,
     });
   },
 
@@ -440,15 +512,17 @@ Page({
       () => {
         if (!hadCurrentVideo) this.restoreCachedOrNextVideo();
         else if (playbackChanged) {
-          this.lastVideo = null;
-          this.forwardVideo = null;
+          this.resetPlaybackSequence();
           this.resetVideoQueue();
           this.nextVideo({ rememberPrevious: false });
         }
         if (!this.data.currentQuote) this.nextQuote();
         this.loadWeather();
         if (hadCurrentVideo && !playbackChanged) this.refreshAmbientAudioState();
-        if (this.data.zenActive && !this.zenPhaseTimer) {
+        if (this.pendingEnterZen && !this.data.zenActive) {
+          this.pendingEnterZen = false;
+          this.enterZen();
+        } else if (this.data.zenActive && !this.zenPhaseTimer) {
           this.startZenCues();
         }
       },
@@ -459,14 +533,6 @@ Page({
     const current = this.data.currentVideo;
     const activeSlot = this.data.activeVideoSlot || 'a';
     const shouldTransition = current && next && current.url && next.url && !sameVideo(current, next);
-    if (options.clearPrevious) {
-      this.lastVideo = null;
-    } else if (options.rememberPrevious && current && next && !sameVideo(current, next)) {
-      this.lastVideo = current;
-    }
-    if (options.clearForward) {
-      this.forwardVideo = null;
-    }
     this.clearVideoLoopState();
     this.clearVideoMessageTimer();
     const ambientTrack = next ? this.ambientTrackForVideo(next) : null;
@@ -729,6 +795,11 @@ Page({
     this.videoQueueKey = '';
   },
 
+  resetPlaybackSequence() {
+    this.playbackSequence = [];
+    this.playbackIndex = -1;
+  },
+
   ensureVideoQueue(settings, currentId) {
     const key = playbackSettingsKey(settings);
     if (this.videoQueueKey !== key || !Array.isArray(this.videoQueue) || !this.videoQueue.length) {
@@ -760,16 +831,17 @@ Page({
   nextVideo(options = {}) {
     this.clearVideoMessageTimer();
 
-    if (options.preferForward && this.forwardVideo) {
-      const forward = this.forwardVideo;
-      this.setCurrentVideo(forward, {
-        rememberPrevious: options.rememberPrevious !== false,
-        clearForward: true,
-      });
+    if (
+      options.preferForward
+      && Array.isArray(this.playbackSequence)
+      && this.playbackIndex >= 0
+      && this.playbackIndex < this.playbackSequence.length - 1
+    ) {
+      this.playbackIndex += 1;
+      this.setCurrentVideo(this.playbackSequence[this.playbackIndex]);
       return;
     }
 
-    this.forwardVideo = null;
     const settings = this.data.settings && this.data.settings.city ? this.data.settings : getSettings();
     const currentId = this.data.currentVideo && this.data.currentVideo.id;
     const queued = this.takeQueuedVideo(settings, currentId);
@@ -782,20 +854,35 @@ Page({
       });
       return;
     }
+    this.rememberPlaybackVideo(next);
     this.setCurrentVideo(next, {
       rememberPrevious: options.rememberPrevious !== false,
     });
   },
 
   previousVideo() {
-    const previous = this.lastVideo;
-    if (!previous) {
+    if (!Array.isArray(this.playbackSequence) || this.playbackIndex <= 0) {
       this.showVideoMessage('没有上一条视频');
       return;
     }
-    const current = this.data.currentVideo;
-    this.forwardVideo = current && !sameVideo(current, previous) ? current : null;
-    this.setCurrentVideo(previous, { clearPrevious: true });
+    this.playbackIndex -= 1;
+    this.setCurrentVideo(this.playbackSequence[this.playbackIndex]);
+  },
+
+  rememberPlaybackVideo(video) {
+    if (!video) return;
+    if (!Array.isArray(this.playbackSequence)) {
+      this.resetPlaybackSequence();
+    }
+    const current = this.playbackSequence[this.playbackIndex];
+    if (current && sameVideo(current, video)) return;
+
+    const head = this.playbackIndex >= 0
+      ? this.playbackSequence.slice(0, this.playbackIndex + 1)
+      : [];
+    head.push(video);
+    this.playbackSequence = head;
+    this.playbackIndex = head.length - 1;
   },
 
   clearVideoMessageTimer() {
@@ -811,6 +898,22 @@ Page({
     this.videoMessageTimer = setTimeout(() => {
       this.setData({ videoError: '' });
       this.videoMessageTimer = null;
+    }, duration);
+  },
+
+  clearFavoriteHintTimer() {
+    if (this.favoriteHintTimer) {
+      clearTimeout(this.favoriteHintTimer);
+      this.favoriteHintTimer = null;
+    }
+  },
+
+  showFavoriteHint(text, duration = 1500) {
+    this.clearFavoriteHintTimer();
+    this.setData({ favoriteHintText: text });
+    this.favoriteHintTimer = setTimeout(() => {
+      this.setData({ favoriteHintText: '' });
+      this.favoriteHintTimer = null;
     }, duration);
   },
 
@@ -855,18 +958,39 @@ Page({
       this.setData({
         forecast: null,
         weatherLabel: '',
+        weatherLoading: false,
+        weatherError: '',
+        weatherCardTemp: '',
+        weatherCardText: '',
+        weatherCardMuted: false,
+        weatherVisible: false,
+        weatherDaily: [],
       });
       return;
     }
+
+    this.setData({
+      weatherLoading: !this.data.forecast,
+      weatherError: '',
+      weatherCardTemp: this.data.forecast ? this.data.weatherCardTemp : '--°',
+      weatherCardText: this.data.forecast ? this.data.weatherCardText : '天气加载中',
+      weatherCardMuted: !this.data.forecast,
+    });
 
     getForecast({
       city: settings.city,
       tempUnit: settings.tempUnit,
     })
       .then((forecast) => {
+        const weatherLabel = describeWeather(forecast.current.weatherCode);
         this.setData({
           forecast,
-          weatherLabel: describeWeather(forecast.current.weatherCode),
+          weatherLabel,
+          weatherLoading: false,
+          weatherError: '',
+          weatherCardTemp: `${forecast.current.temperature}°`,
+          weatherCardText: `${weatherLabel} · ${forecast.location}`,
+          weatherCardMuted: false,
           weatherDaily: (forecast.daily || []).map((day, index) => ({
             ...day,
             label: dailyLabel(day.date, index),
@@ -883,9 +1007,22 @@ Page({
       })
       .catch((error) => {
         console.warn('Weather load failed:', error);
+        if (this.data.forecast) {
+          this.setData({
+            weatherLoading: false,
+            weatherError: '',
+            weatherCardMuted: false,
+          });
+          return;
+        }
         this.setData({
           forecast: null,
           weatherLabel: '',
+          weatherLoading: false,
+          weatherError: '天气暂不可用',
+          weatherCardTemp: '--°',
+          weatherCardText: '天气暂不可用',
+          weatherCardMuted: true,
           weatherVisible: false,
           weatherDaily: [],
         });
@@ -927,15 +1064,18 @@ Page({
     const result = toggleFavoriteVideo(this.data.currentVideo);
     if (this.data.settings && this.data.settings.shuffleScope === 'favorites') {
       this.resetVideoQueue();
+      this.resetPlaybackSequence();
     }
     this.setData({
       currentVideoFavorited: result.favorited,
     });
-    wx.showToast({
-      title: result.favorited ? FAVORITE_TOAST_TEXT : '已取消收藏',
-      icon: 'none',
-      duration: result.favorited ? 2600 : 1500,
-    });
+    this.showFavoriteHint(result.favorited ? '已收藏' : '已取消收藏');
+  },
+
+  toggleFavoriteFromGesture() {
+    if (!this.data.currentVideo) return;
+    vibrateShort('light');
+    this.toggleFavorite();
   },
 
   ambientTrackForVideo(video) {
@@ -1945,9 +2085,12 @@ Page({
     this.prepareLoopCrossfade(slot);
   },
 
-  openSettings() {
+  openSettings(source) {
+    const from = (source === 'zen' || source === 'home')
+      ? source
+      : this.data.zenActive ? 'zen' : 'home';
     wx.navigateTo({
-      url: '/pages/settings/settings',
+      url: `/pages/settings/settings?from=${from}`,
     });
   },
 });

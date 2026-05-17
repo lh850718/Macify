@@ -115,9 +115,14 @@ Page({
     ambientSelectedCount: 0,
     ambientSelectedLimitText: `0/${MAX_CUSTOM_AMBIENT_TRACKS}`,
     ambientAuditionOn: false,
+    returnFrom: 'home',
   },
 
-  onLoad() {
+  onLoad(options = {}) {
+    this.settingsReturnFrom = options.from === 'zen' ? 'zen' : 'home';
+    this.setData({
+      returnFrom: this.settingsReturnFrom,
+    });
     this.loadSettings();
   },
 
@@ -155,7 +160,7 @@ Page({
     if (!settings || !Object.keys(settings).length) return;
     saveSettings({
       ...settings,
-      city: String(settings.city || '').trim() || 'Shanghai',
+      city: String(settings.city || '').trim() || '北京',
     });
   },
 
@@ -188,7 +193,7 @@ Page({
 
   onCityBlur(event) {
     this.updateSettings({
-      city: event.detail.value.trim() || 'Shanghai',
+      city: event.detail.value.trim() || '北京',
     });
   },
 
@@ -327,6 +332,23 @@ Page({
   openLicenses() {
     wx.navigateTo({
       url: '/pages/licenses/licenses',
+    });
+  },
+
+  saveAndReturn() {
+    this.persistDraftSettings();
+    this.stopAuditionAudio();
+    if (this.data.ambientAuditionOn) this.setData({ ambientAuditionOn: false });
+
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    if (pages.length > 1) {
+      wx.navigateBack({ delta: 1 });
+      return;
+    }
+
+    const mode = this.settingsReturnFrom === 'zen' ? 'zen' : 'home';
+    wx.redirectTo({
+      url: `/pages/index/index${mode === 'zen' ? '?mode=zen' : ''}`,
     });
   },
 

@@ -3,11 +3,11 @@
   bindtouchstart="onScreenTouchStart"
   bindtouchend="onScreenTouchEnd"
   bindtouchcancel="onScreenTouchCancel"
-  bindlongpress="onScreenLongPress"
   bindtap="onScreenTap"
 >
   <image
     wx:if="{{!videoTransitionPoster && !videoReady && currentVideo && currentVideo.poster}}"
+    data-screen-tap="true"
     class="poster loading-poster"
     src="{{currentVideo.poster}}"
     mode="aspectFill"
@@ -15,6 +15,7 @@
 
   <image
     wx:if="{{videoTransitionPoster}}"
+    data-screen-tap="true"
     class="poster transition-poster {{videoTransitionStage === 'revealing' ? 'transition-poster-revealing' : ''}}"
     src="{{videoTransitionPoster}}"
     mode="aspectFill"
@@ -24,6 +25,7 @@
     wx:if="{{videoSlotA && videoSlotA.url}}"
     id="aerialVideoA"
     data-slot="a"
+    data-screen-tap="true"
     class="aerial-video {{videoLoopCrossfading ? 'aerial-video-looping' : ''}} {{activeVideoSlot === 'a' ? 'aerial-video-active' : ''}} {{incomingVideoSlot === 'a' ? 'aerial-video-incoming' : ''}} {{videoLoopRevealing && incomingVideoSlot === 'a' ? 'aerial-video-loop-revealing' : ''}}"
     src="{{videoSlotA.url}}"
     poster="{{videoSlotA.poster}}"
@@ -45,6 +47,7 @@
     wx:if="{{videoSlotB && videoSlotB.url}}"
     id="aerialVideoB"
     data-slot="b"
+    data-screen-tap="true"
     class="aerial-video {{videoLoopCrossfading ? 'aerial-video-looping' : ''}} {{activeVideoSlot === 'b' ? 'aerial-video-active' : ''}} {{incomingVideoSlot === 'b' ? 'aerial-video-incoming' : ''}} {{videoLoopRevealing && incomingVideoSlot === 'b' ? 'aerial-video-loop-revealing' : ''}}"
     src="{{videoSlotB.url}}"
     poster="{{videoSlotB.poster}}"
@@ -62,9 +65,9 @@
     binderror="onVideoError"
   />
 
-  <view class="video-only-hitarea" wx:if="{{videoOnlyActive}}" catchtap="onScreenTap"></view>
+  <view class="video-only-hitarea" wx:if="{{videoOnlyActive}}" data-screen-tap="true" catchtap="onScreenTap"></view>
 
-  <view class="shade" wx:if="{{!videoOnlyActive}}"></view>
+  <view class="shade" wx:if="{{!videoOnlyActive}}" data-screen-tap="true"></view>
 
   <view class="topbar" wx:if="{{!zenActive && !videoOnlyActive}}">
     <view wx:if="{{settings.showVideoMeta && currentVideo}}" class="meta" bindtap="openVideoIntro">
@@ -72,9 +75,13 @@
       <view class="meta-line"></view>
     </view>
 
-    <view wx:if="{{settings.showWeather && forecast}}" class="weather" bindtap="toggleWeather">
-      <text class="weather-temp">{{forecast.current.temperature}}°</text>
-      <text class="weather-copy">{{weatherLabel}} · {{forecast.location}}</text>
+    <view
+      wx:if="{{settings.showWeather && weatherCardText}}"
+      class="weather {{weatherCardMuted ? 'weather-muted' : ''}}"
+      bindtap="toggleWeather"
+    >
+      <text class="weather-temp">{{weatherCardTemp}}</text>
+      <text class="weather-copy">{{weatherCardText}}</text>
     </view>
   </view>
 
@@ -138,7 +145,6 @@
   </view>
 
   <view class="bottom-actions" wx:if="{{!zenActive && !videoOnlyActive}}">
-    <view class="icon-button quote-button" bindtap="nextQuote" aria-label="切换名言">“</view>
     <view class="icon-button dots-button" bindtap="openSettings">···</view>
     <view
       class="icon-button audio-button {{ambientSoundOn ? 'audio-button-active' : ''}} {{ambientTrackAvailable ? '' : 'audio-button-empty'}}"
@@ -210,5 +216,6 @@
     </view>
   </view>
 
+  <view wx:if="{{favoriteHintText}}" class="favorite-hint">{{favoriteHintText}}</view>
   <view wx:if="{{videoError && !videoOnlyActive}}" class="toast glass">{{videoError}}</view>
 </view>

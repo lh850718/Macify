@@ -3,6 +3,38 @@ const { getCache, setCache } = require('./storage.js');
 const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const FORECAST_TTL_MS = 30 * 60 * 1000;
+const KNOWN_CITY_GEOS = Object.freeze({
+  beijing: {
+    lat: 39.9075,
+    lng: 116.39723,
+    name: '北京',
+    country: 'CN',
+  },
+  '北京': {
+    lat: 39.9075,
+    lng: 116.39723,
+    name: '北京',
+    country: 'CN',
+  },
+  peking: {
+    lat: 39.9075,
+    lng: 116.39723,
+    name: '北京',
+    country: 'CN',
+  },
+  shanghai: {
+    lat: 31.22222,
+    lng: 121.45806,
+    name: '上海',
+    country: 'CN',
+  },
+  '上海': {
+    lat: 31.22222,
+    lng: 121.45806,
+    name: '上海',
+    country: 'CN',
+  },
+});
 
 function buildQuery(params) {
   return Object.keys(params)
@@ -17,6 +49,15 @@ function requestJson(url) {
       method: 'GET',
       success(response) {
         if (response.statusCode >= 200 && response.statusCode < 300) {
+          if (typeof response.data === 'string') {
+            try {
+              resolve(JSON.parse(response.data));
+              return;
+            } catch (error) {
+              reject(error);
+              return;
+            }
+          }
           resolve(response.data);
           return;
         }
@@ -41,6 +82,7 @@ function arrayItem(arr, index) {
 async function geocodeCity(city) {
   const key = String(city || '').trim().toLowerCase();
   if (!key) throw new Error('City is empty');
+  if (KNOWN_CITY_GEOS[key]) return KNOWN_CITY_GEOS[key];
 
   const cache = getCache('geocode') || {};
   if (cache[key]) return cache[key];
@@ -118,29 +160,34 @@ async function getForecast(options) {
     return cached.data;
   }
 
-  const geo = await geocodeCity(city);
-  const data = await fetchForecast(geo, tempUnit);
-  const current = data.current || {};
-  const forecast = {
-    location: geo.name,
-    unit: tempUnit === 'fahrenheit' ? 'F' : 'C',
-    current: {
-      temperature: roundOrNull(current.temperature_2m),
-      feelsLike: roundOrNull(current.apparent_temperature),
-      humidity: roundOrNull(current.relative_humidity_2m),
-      weatherCode: current.weather_code,
-      windSpeed: roundOrNull(current.wind_speed_10m),
-    },
-    daily: parseDaily(data),
-  };
+  try {
+    const geo = await geocodeCity(city);
+    const data = await fetchForecast(geo, tempUnit);
+    const current = data.current || {};
+    const forecast = {
+      location: geo.name,
+      unit: tempUnit === 'fahrenheit' ? 'F' : 'C',
+      current: {
+        temperature: roundOrNull(current.temperature_2m),
+        feelsLike: roundOrNull(current.apparent_temperature),
+        humidity: roundOrNull(current.relative_humidity_2m),
+        weatherCode: current.weather_code,
+        windSpeed: roundOrNull(current.wind_speed_10m),
+      },
+      daily: parseDaily(data),
+    };
 
-  setCache('forecast', {
-    key: cacheKey,
-    ts: Date.now(),
-    data: forecast,
-  });
+    setCache('forecast', {
+      key: cacheKey,
+      ts: Date.now(),
+      data: forecast,
+    });
 
-  return forecast;
+    return forecast;
+  } catch (error) {
+    if (cached && cached.data) return cached.data;
+    throw error;
+  }
 }
 
 const WEATHER_LABELS = {

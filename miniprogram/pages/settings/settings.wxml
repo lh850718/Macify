@@ -20,6 +20,26 @@
       </view>
       <switch checked="{{settings.showWeather}}" data-key="showWeather" bindchange="onSwitchChange" color="#47c7a2" />
     </view>
+    <view class="weather-inline-row" wx:if="{{settings.showWeather}}">
+      <input
+        class="weather-city-input"
+        name="city"
+        value="{{settings.city}}"
+        placeholder="北京"
+        bindinput="onCityInput"
+        bindblur="onCityBlur"
+      />
+      <radio-group class="weather-unit-segment" bindchange="onTempUnitChange">
+        <label class="weather-unit-option {{tempIsCelsius ? 'weather-unit-option-active' : ''}}">
+          <radio class="weather-unit-radio" value="celsius" checked="{{tempIsCelsius}}" color="#47c7a2" />
+          <text class="weather-unit-text">摄氏度</text>
+        </label>
+        <label class="weather-unit-option {{tempIsFahrenheit ? 'weather-unit-option-active' : ''}}">
+          <radio class="weather-unit-radio" value="fahrenheit" checked="{{tempIsFahrenheit}}" color="#47c7a2" />
+          <text class="weather-unit-text">华氏度</text>
+        </label>
+      </radio-group>
+    </view>
     <view class="setting-row">
       <view class="row-copy">
         <text class="label">语录</text>
@@ -169,35 +189,6 @@
 
   <view class="section">
     <view class="section-head">
-      <text class="section-title">天气</text>
-    </view>
-    <view class="field-block">
-      <view class="field-label-row">
-        <text class="label">城市</text>
-      </view>
-      <input
-        class="input"
-        name="city"
-        value="{{settings.city}}"
-        placeholder="Shanghai"
-        bindinput="onCityInput"
-        bindblur="onCityBlur"
-      />
-    </view>
-    <radio-group class="unit-segment" bindchange="onTempUnitChange">
-      <label class="unit-option {{tempIsCelsius ? 'unit-option-active' : ''}}">
-        <radio class="unit-radio" value="celsius" checked="{{tempIsCelsius}}" color="#47c7a2" />
-        <text class="unit-text">摄氏度</text>
-      </label>
-      <label class="unit-option {{tempIsFahrenheit ? 'unit-option-active' : ''}}">
-        <radio class="unit-radio" value="fahrenheit" checked="{{tempIsFahrenheit}}" color="#47c7a2" />
-        <text class="unit-text">华氏度</text>
-      </label>
-    </radio-group>
-  </view>
-
-  <view class="section">
-    <view class="section-head">
       <text class="section-title">背景视频</text>
     </view>
     <view class="scope-field">
@@ -274,5 +265,9 @@
         </view>
       </view>
     </view>
+  </view>
+
+  <view class="save-return-bar">
+    <view class="save-return-button" bindtap="saveAndReturn" hover-class="tap-soft">保存返回</view>
   </view>
 </view>

@@ -8,7 +8,11 @@ const { pickQuote } = require('../../utils/quotes.js');
 const { shuffledVideoQueue, videoById } = require('../../utils/videos.js');
 const { cachedVideoForSettings, cacheVideo } = require('../../utils/video-cache.js');
 const { getForecast, describeWeather } = require('../../utils/weather.js');
-const { ambientTrackForVideo } = require('../../data/ambient-audio.js');
+const {
+  AMBIENT_AUDIO_MODES,
+  ambientMixFromCustomSettings,
+  ambientTrackForVideo,
+} = require('../../data/ambient-audio.js');
 
 const BREATH_HAPTIC_BASE_MS = 5000;
 const BREATH_SCALE_MIN = 0.45;
@@ -426,6 +430,7 @@ Page({
     const settings = getSettings();
     const nextPlaybackKey = playbackSettingsKey(settings);
     const playbackChanged = this.playbackSettingsKey && this.playbackSettingsKey !== nextPlaybackKey;
+    const hadCurrentVideo = !!this.data.currentVideo;
     this.playbackSettingsKey = nextPlaybackKey;
 
     this.setData(
@@ -433,7 +438,7 @@ Page({
         settings,
       },
       () => {
-        if (!this.data.currentVideo) this.restoreCachedOrNextVideo();
+        if (!hadCurrentVideo) this.restoreCachedOrNextVideo();
         else if (playbackChanged) {
           this.lastVideo = null;
           this.forwardVideo = null;
@@ -442,6 +447,7 @@ Page({
         }
         if (!this.data.currentQuote) this.nextQuote();
         this.loadWeather();
+        if (hadCurrentVideo && !playbackChanged) this.refreshAmbientAudioState();
         if (this.data.zenActive && !this.zenPhaseTimer) {
           this.startZenCues();
         }
@@ -463,7 +469,7 @@ Page({
     }
     this.clearVideoLoopState();
     this.clearVideoMessageTimer();
-    const ambientTrack = next ? ambientTrackForVideo(next) : null;
+    const ambientTrack = next ? this.ambientTrackForVideo(next) : null;
     const videoData = {
       currentVideo: next,
       currentVideoIntro: next ? next.description || '' : '',
@@ -932,8 +938,26 @@ Page({
     });
   },
 
+  ambientTrackForVideo(video) {
+    const settings = this.data.settings || getSettings();
+    if (settings.ambientAudioMode === AMBIENT_AUDIO_MODES.CUSTOM) {
+      return ambientMixFromCustomSettings(settings.customAmbientMix);
+    }
+    return ambientTrackForVideo(video);
+  },
+
   currentAmbientTrack() {
-    return ambientTrackForVideo(this.data.currentVideo);
+    return this.ambientTrackForVideo(this.data.currentVideo);
+  },
+
+  refreshAmbientAudioState() {
+    const track = this.currentAmbientTrack();
+    this.setData({
+      ambientTrackAvailable: !!track,
+      ambientTrackLabel: track ? track.label : '',
+    }, () => {
+      if (this.data.ambientSoundOn) this.syncAmbientAudioForCurrentVideo();
+    });
   },
 
   toggleAmbientSound() {
@@ -946,7 +970,9 @@ Page({
     const track = this.currentAmbientTrack();
     if (!track) {
       wx.showToast({
-        title: '当前视频暂无匹配音频',
+        title: this.data.settings && this.data.settings.ambientAudioMode === AMBIENT_AUDIO_MODES.CUSTOM
+          ? '请在设置里调大混音音量'
+          : '当前视频暂无匹配音频',
         icon: 'none',
         duration: 1500,
       });

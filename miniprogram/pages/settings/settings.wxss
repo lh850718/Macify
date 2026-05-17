@@ -293,6 +293,133 @@
   box-shadow: inset 0 0 0 1rpx rgba(31, 143, 117, 0.08);
 }
 
+.audio-mode-segment {
+  min-height: 82rpx;
+  border-top: 1rpx solid rgba(21, 34, 43, 0.07);
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 18rpx 0 20rpx;
+}
+
+.audio-mode-option {
+  position: relative;
+  min-height: 70rpx;
+  flex: 1;
+  padding: 0 14rpx;
+  box-sizing: border-box;
+  border-radius: 18rpx;
+  background: #f2f5f7;
+  color: #64727c;
+  font-size: 25rpx;
+  font-weight: 580;
+  line-height: 70rpx;
+  text-align: center;
+  box-shadow: inset 0 0 0 1rpx rgba(31, 67, 78, 0.06);
+}
+
+.audio-mode-option-active {
+  background: #14333a;
+  color: #ecfffa;
+  box-shadow: 0 10rpx 22rpx rgba(20, 51, 58, 0.16);
+}
+
+.audio-mode-radio {
+  position: absolute;
+  width: 1rpx;
+  height: 1rpx;
+  opacity: 0;
+}
+
+.audio-mode-text {
+  display: block;
+}
+
+.audio-mix-panel {
+  border-top: 1rpx solid rgba(21, 34, 43, 0.07);
+  padding: 18rpx 0 24rpx;
+}
+
+.audio-mix-toolbar {
+  min-height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.audio-mix-count {
+  color: #798791;
+  font-size: 24rpx;
+  font-weight: 650;
+}
+
+.audition-button {
+  min-width: 148rpx;
+  height: 62rpx;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+  border-radius: 18rpx;
+  background: #f1f5f6;
+  color: #51616b;
+  font-size: 24rpx;
+  font-weight: 680;
+  line-height: 62rpx;
+  text-align: center;
+  box-shadow: inset 0 0 0 1rpx rgba(31, 67, 78, 0.08);
+}
+
+.audition-button-active {
+  background: #e7f7f1;
+  color: #16745f;
+  box-shadow: inset 0 0 0 1rpx rgba(31, 143, 117, 0.16);
+}
+
+.audio-track-list {
+  margin-top: 12rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.audio-track-row {
+  min-height: 76rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.audio-track-name {
+  width: 176rpx;
+  height: 68rpx;
+  flex: 0 0 176rpx;
+  border-radius: 18rpx;
+  background: #f6f8fa;
+  color: #53636e;
+  font-size: 25rpx;
+  font-weight: 620;
+  line-height: 68rpx;
+  text-align: center;
+  box-shadow: inset 0 0 0 1rpx rgba(31, 67, 78, 0.08);
+}
+
+.audio-track-row-active .audio-track-name {
+  background: #e7f7f1;
+  color: #16745f;
+  font-weight: 730;
+  box-shadow: inset 0 0 0 1rpx rgba(31, 143, 117, 0.2);
+}
+
+.audio-track-row-disabled .audio-track-name {
+  opacity: 0.48;
+}
+
+.audio-volume-slider {
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+}
+
 .tap-soft {
   opacity: 0.76;
 }

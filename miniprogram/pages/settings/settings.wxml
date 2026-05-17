@@ -216,4 +216,63 @@
       </view>
     </view>
   </view>
+
+  <view class="section">
+    <view class="section-head">
+      <text class="section-title">视频背景音</text>
+    </view>
+    <radio-group class="audio-mode-segment" bindchange="onAmbientAudioModeChange">
+      <label class="audio-mode-option {{ambientAudioModeIsVideo ? 'audio-mode-option-active' : ''}}">
+        <radio class="audio-mode-radio" value="video" checked="{{ambientAudioModeIsVideo}}" color="#47c7a2" />
+        <text class="audio-mode-text">视频自带音频</text>
+      </label>
+      <label class="audio-mode-option {{ambientAudioModeIsCustom ? 'audio-mode-option-active' : ''}}">
+        <radio class="audio-mode-radio" value="custom" checked="{{ambientAudioModeIsCustom}}" color="#47c7a2" />
+        <text class="audio-mode-text">自定义混音</text>
+      </label>
+    </radio-group>
+
+    <view class="audio-mix-panel" wx:if="{{ambientAudioModeIsCustom}}">
+      <view class="audio-mix-toolbar">
+        <text class="audio-mix-count">{{ambientSelectedLimitText}}</text>
+        <view
+          class="audition-button {{ambientAuditionOn ? 'audition-button-active' : ''}}"
+          bindtap="toggleAmbientAudition"
+          hover-class="tap-soft"
+        >{{ambientAuditionOn ? '停止试听' : '开始试听'}}</view>
+      </view>
+
+      <view class="audio-track-list">
+        <view
+          class="audio-track-row {{item.selected ? 'audio-track-row-active' : ''}} {{item.disabled ? 'audio-track-row-disabled' : ''}}"
+          wx:for="{{customAmbientTracks}}"
+          wx:key="id"
+        >
+          <view
+            class="audio-track-name"
+            data-track-id="{{item.id}}"
+            bindtap="onCustomTrackTap"
+            hover-class="tap-soft"
+          >
+            <text>{{item.label}}</text>
+          </view>
+          <slider
+            wx:if="{{item.selected}}"
+            class="audio-volume-slider"
+            min="0"
+            max="100"
+            step="1"
+            value="{{item.volumePercent}}"
+            activeColor="#47c7a2"
+            backgroundColor="#d8e0e3"
+            block-color="#ffffff"
+            block-size="18"
+            data-track-id="{{item.id}}"
+            bindchanging="onCustomTrackVolumeChanging"
+            bindchange="onCustomTrackVolumeChange"
+          />
+        </view>
+      </view>
+    </view>
+  </view>
 </view>

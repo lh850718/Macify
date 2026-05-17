@@ -1,4 +1,9 @@
 const DEFAULT_AMBIENT_AUDIO_BASE = 'https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-audio';
+const MAX_CUSTOM_AMBIENT_TRACKS = 5;
+const AMBIENT_AUDIO_MODES = Object.freeze({
+  VIDEO: 'video',
+  CUSTOM: 'custom',
+});
 
 const AMBIENT_TRACKS = Object.freeze({
   ocean: {
@@ -92,6 +97,36 @@ const AMBIENT_TRACKS = Object.freeze({
     durationMs: 249731,
     volume: 0.36,
   },
+});
+
+const CUSTOM_AMBIENT_TRACK_IDS = Object.freeze([
+  'wind',
+  'waterfall',
+  'sky',
+  'fire',
+  'lightRain',
+  'river',
+  'birds',
+  'forestWindBirds',
+  'forest',
+  'ocean',
+  'oceanGulls',
+  'underwater',
+]);
+
+const CUSTOM_AMBIENT_LABELS = Object.freeze({
+  wind: '林中风',
+  waterfall: '瀑布',
+  sky: '高空',
+  fire: '火',
+  lightRain: '小雨',
+  river: '溪流',
+  birds: '鸟叫',
+  forestWindBirds: '山中鸟叫',
+  forest: '森林',
+  ocean: '海浪',
+  oceanGulls: '海鸥海浪',
+  underwater: '水下',
 });
 
 const AMBIENT_VIDEO_OVERRIDES = Object.freeze({
@@ -275,6 +310,7 @@ function hydrateTrack(spec, base) {
   return {
     ...track,
     channelId: track.id,
+    label: spec && typeof spec === 'object' && spec.label ? spec.label : track.label,
     volume,
     url: `${base}/${track.file}`,
   };
@@ -318,8 +354,65 @@ function ambientTrackForVideo(video, options = {}) {
   return ambientMixFromSpec(rule.trackId, options);
 }
 
+function clampMixVolume(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Math.min(1, number));
+}
+
+function customAmbientTrackLabel(trackId) {
+  return CUSTOM_AMBIENT_LABELS[trackId] || (AMBIENT_TRACKS[trackId] && AMBIENT_TRACKS[trackId].label) || trackId;
+}
+
+function customAmbientTrackOptions() {
+  return CUSTOM_AMBIENT_TRACK_IDS
+    .map((trackId) => {
+      const track = AMBIENT_TRACKS[trackId];
+      if (!track) return null;
+      return {
+        id: trackId,
+        label: customAmbientTrackLabel(trackId),
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeCustomAmbientMix(raw) {
+  const source = Array.isArray(raw) ? raw : [];
+  const normalized = [];
+  source.forEach((item) => {
+    const trackId = item && item.trackId;
+    if (!CUSTOM_AMBIENT_TRACK_IDS.includes(trackId)) return;
+    if (normalized.some((track) => track.trackId === trackId)) return;
+    if (normalized.length >= MAX_CUSTOM_AMBIENT_TRACKS) return;
+    normalized.push({
+      trackId,
+      volume: clampMixVolume(item.volume),
+    });
+  });
+  return normalized;
+}
+
+function ambientMixFromCustomSettings(customMix, options = {}) {
+  const specs = normalizeCustomAmbientMix(customMix)
+    .filter((item) => item.volume > 0)
+    .map((item) => ({
+      trackId: item.trackId,
+      label: customAmbientTrackLabel(item.trackId),
+      volume: item.volume,
+    }));
+
+  return ambientMixFromSpec(specs, options);
+}
+
 module.exports = {
+  AMBIENT_AUDIO_MODES,
   DEFAULT_AMBIENT_AUDIO_BASE,
   AMBIENT_TRACKS,
+  MAX_CUSTOM_AMBIENT_TRACKS,
+  ambientMixFromCustomSettings,
+  ambientMixFromSpec,
   ambientTrackForVideo,
+  customAmbientTrackOptions,
+  normalizeCustomAmbientMix,
 };

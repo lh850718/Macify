@@ -1,4 +1,8 @@
 const SETTINGS_KEY = 'macify.settings.v1';
+const {
+  AMBIENT_AUDIO_MODES,
+  normalizeCustomAmbientMix,
+} = require('../data/ambient-audio.js');
 const CACHE_PREFIX = 'macify.cache.';
 const FAVORITE_VIDEOS_KEY = 'favorite-videos-v1';
 const DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE = 'https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-premium';
@@ -41,6 +45,8 @@ const DEFAULT_SETTINGS = Object.freeze({
   videoSource: 'lite',
   premiumFreeAerialVideoBase: DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE,
   premiumFreeAerialSourceVersion: PREMIUM_FREE_AERIAL_SOURCE_VERSION,
+  ambientAudioMode: AMBIENT_AUDIO_MODES.VIDEO,
+  customAmbientMix: [],
   zenHaptics: false,
   zenSound: false,
   rememberZenCues: false,
@@ -113,6 +119,10 @@ function normalizeSettings(raw) {
   if (settings.premiumFreeAerialSourceVersion !== PREMIUM_FREE_AERIAL_SOURCE_VERSION) {
     settings.premiumFreeAerialSourceVersion = PREMIUM_FREE_AERIAL_SOURCE_VERSION;
   }
+  if (!Object.keys(AMBIENT_AUDIO_MODES).some((key) => AMBIENT_AUDIO_MODES[key] === settings.ambientAudioMode)) {
+    settings.ambientAudioMode = AMBIENT_AUDIO_MODES.VIDEO;
+  }
+  settings.customAmbientMix = normalizeCustomAmbientMix(settings.customAmbientMix);
   settings.defaultBreathRhythm = normalizeBreathRhythm(
     settings.defaultBreathRhythm,
     DEFAULT_BREATH_RHYTHM,

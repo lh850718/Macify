@@ -1,5 +1,5 @@
 {
-  "description": "Macify WeChat Mini Program",
+  "description": "呼吸Zen WeChat Mini Program",
   "packOptions": {
     "ignore": [
       {
@@ -13,6 +13,14 @@
       {
         "type": "file",
         "value": "README.md"
+      },
+      {
+        "type": "file",
+        "value": "data/apple-aerial-1080.js"
+      },
+      {
+        "type": "file",
+        "value": "data/video-intros.js"
       }
     ]
   },
@@ -46,7 +54,7 @@
   },
   "compileType": "miniprogram",
   "libVersion": "latest",
-  "appid": "touristappid",
-  "projectname": "Macify",
+  "appid": "wx8566982d6a0e0ded",
+  "projectname": "呼吸Zen",
   "condition": {}
 }

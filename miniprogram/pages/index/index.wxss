@@ -448,6 +448,14 @@
   pointer-events: none;
 }
 
+.zen-audio-action {
+  position: fixed;
+  right: 104rpx;
+  bottom: calc(env(safe-area-inset-bottom) + 31rpx);
+  z-index: 8;
+  pointer-events: auto;
+}
+
 .zen-exit {
   position: fixed;
   right: 34rpx;
@@ -616,7 +624,7 @@
   align-items: center;
   gap: 22rpx;
   width: auto;
-  max-width: 160rpx;
+  max-width: 240rpx;
 }
 
 .icon-button {
@@ -638,6 +646,23 @@
 .dots-button {
   font-size: 36rpx;
   letter-spacing: 2rpx;
+}
+
+.audio-button {
+  font-size: 34rpx;
+  opacity: 0.54;
+  transform: translateY(-1rpx);
+  transition: opacity 180ms ease, color 180ms ease, text-shadow 180ms ease;
+}
+
+.audio-button-active {
+  opacity: 1;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 0 18rpx rgba(255, 255, 255, 0.28), 0 4rpx 16rpx rgba(0, 0, 0, 0.55);
+}
+
+.audio-button-empty {
+  opacity: 0.24;
 }
 
 .toast {

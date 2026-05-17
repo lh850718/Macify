@@ -1,7 +1,5 @@
-const apple1080Videos = require('../data/apple-aerial-1080.js');
 const premiumFreeAerialVideos = require('../data/premium-free-aerial-videos.js');
 const {
-  DEFAULT_LITE_VIDEO_BASE,
   DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE,
   DEFAULT_VIDEO_LIBRARY,
   getCache,
@@ -10,19 +8,10 @@ const {
   videoFavoriteKey,
 } = require('./storage.js');
 
-const APPLE_HOST = 'https://sylvan.apple.com';
 const VIDEO_SHUFFLE_CACHE_KEY = 'video-shuffle-history-v1';
 const FAVORITES_SCOPE = 'favorites';
 
-const APPLE_CATEGORY_OPTIONS = Object.freeze([
-  { value: 'all', label: '全部' },
-  { value: FAVORITES_SCOPE, label: '收藏' },
-  { value: 'Landscapes', label: '自然景观' },
-  { value: 'Cities', label: '城市景观' },
-  { value: 'Underwater', label: '水下景观' },
-  { value: 'Space', label: '太空' },
-]);
-const PREMIUM_CATEGORY_OPTIONS = Object.freeze([
+const CATEGORY_OPTIONS = Object.freeze([
   { value: 'all', label: '全部' },
   { value: FAVORITES_SCOPE, label: '收藏' },
   { value: 'Landscapes', label: '自然景观' },
@@ -31,78 +20,49 @@ const PREMIUM_CATEGORY_OPTIONS = Object.freeze([
   { value: 'Motion', label: '运转' },
   { value: 'Underwater', label: '水下景观' },
 ]);
-const CATEGORY_OPTIONS = APPLE_CATEGORY_OPTIONS;
 
 const VIDEO_LIBRARY_OPTIONS = Object.freeze([
-  { value: 'apple', label: 'Apple 轻量航拍' },
-  { value: 'premiumFreeAerial', label: '高端免费航拍' },
+  { value: DEFAULT_VIDEO_LIBRARY, label: '背景视频' },
 ]);
-
-function normalizeProxyBase(proxyBase) {
-  return String(proxyBase || '').trim().replace(/\/$/, '');
-}
 
 function normalizeBase(base) {
   return String(base || '').trim().replace(/\/$/, '');
 }
 
-function normalizeVideoLibrary(value) {
-  if (value === 'premiumFreeAerial') {
-    return 'premiumFreeAerial';
-  }
+function normalizeVideoLibrary() {
   return DEFAULT_VIDEO_LIBRARY;
 }
 
-function activeVideoLibrary(settings) {
-  if (!settings || settings.videoSource !== 'lite') {
-    return DEFAULT_VIDEO_LIBRARY;
-  }
-  return normalizeVideoLibrary(settings.videoLibrary);
+function activeVideoLibrary() {
+  return DEFAULT_VIDEO_LIBRARY;
 }
 
-function categoryOptionsForLibrary(library) {
-  return normalizeVideoLibrary(library) === 'premiumFreeAerial'
-    ? PREMIUM_CATEGORY_OPTIONS
-    : APPLE_CATEGORY_OPTIONS;
+function categoryOptionsForLibrary() {
+  return CATEGORY_OPTIONS;
 }
 
-function sourceVideosForSettings(settings) {
-  if (activeVideoLibrary(settings) === 'premiumFreeAerial') {
-    return premiumFreeAerialVideos.filter((video) => video.qualityTier === 'published');
-  }
-  return apple1080Videos;
+function sourceVideosForSettings() {
+  return premiumFreeAerialVideos.filter((video) => video.qualityTier === 'published');
 }
 
-function sourceUrlFor(video, settings, library) {
-  const url = video.url || '';
-  return library === 'apple' ? applyProxy(url, settings) : url;
+function sourceUrlFor(video) {
+  return video.url || '';
 }
 
-function applyProxy(url, settings) {
-  const proxyBase = normalizeProxyBase(settings.proxyBase);
-  if (settings.reverseProxy && proxyBase) {
-    return url.replace(APPLE_HOST, proxyBase);
-  }
-  return url;
+function liteBaseForSettings(settings) {
+  return normalizeBase(settings.premiumFreeAerialVideoBase || DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE);
 }
 
-function liteBaseForSettings(settings, library) {
-  if (library === 'premiumFreeAerial') {
-    return normalizeBase(settings.premiumFreeAerialVideoBase || DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE);
-  }
-  return normalizeBase(settings.liteVideoBase || DEFAULT_LITE_VIDEO_BASE);
-}
-
-function liteUrlFor(video, settings, library) {
-  const base = liteBaseForSettings(settings, library);
+function liteUrlFor(video, settings) {
+  const base = liteBaseForSettings(settings);
   if (!base) return '';
   return `${base}/videos/${video.id}.mp4`;
 }
 
-function videoUrlFor(video, settings, library) {
-  const sourceUrl = sourceUrlFor(video, settings, library);
+function videoUrlFor(video, settings) {
+  const sourceUrl = sourceUrlFor(video);
   if (settings.videoSource === 'lite') {
-    return liteUrlFor(video, settings, library) || sourceUrl;
+    return liteUrlFor(video, settings) || sourceUrl;
   }
   return sourceUrl;
 }
@@ -122,23 +82,24 @@ function itemsForSettings(settings) {
   }
 
   return filtered.map((video) => {
-    const sourceUrl = sourceUrlFor(video, settings, library);
-    const liteUrl = settings.videoSource === 'lite' ? liteUrlFor(video, settings, library) : '';
+    const sourceUrl = sourceUrlFor(video);
+    const liteUrl = settings.videoSource === 'lite' ? liteUrlFor(video, settings) : '';
     return {
       id: video.id,
-      url: liteUrl || videoUrlFor(video, settings, library),
+      url: liteUrl || videoUrlFor(video, settings),
       fallbackUrl: liteUrl ? sourceUrl : '',
-      poster: library === 'apple' ? applyProxy(video.previewImage, settings) : video.previewImage || '',
+      poster: video.previewImage || '',
       name: video.displayName || video.name,
       originalName: video.name,
       category: video.category,
       subcategories: video.subcategories || [],
+      tags: video.tags || [],
       timeOfDay: video.timeOfDay || '',
       locationName: video.locationName || '',
       locationCountry: video.locationCountry || '',
       description: video.description || '',
       videoLibrary: library,
-      sourceName: video.sourceName || (library === 'apple' ? 'Apple' : ''),
+      sourceName: video.sourceName || '',
       sourcePage: video.sourcePage || '',
       license: video.license || '',
       attribution: video.attribution || '',
@@ -158,23 +119,24 @@ function videoById(settings, id) {
   ) {
     return null;
   }
-  const sourceUrl = sourceUrlFor(video, settings, library);
-  const liteUrl = settings.videoSource === 'lite' ? liteUrlFor(video, settings, library) : '';
+  const sourceUrl = sourceUrlFor(video);
+  const liteUrl = settings.videoSource === 'lite' ? liteUrlFor(video, settings) : '';
   return {
     id: video.id,
-    url: liteUrl || videoUrlFor(video, settings, library),
+    url: liteUrl || videoUrlFor(video, settings),
     fallbackUrl: liteUrl ? sourceUrl : '',
-    poster: library === 'apple' ? applyProxy(video.previewImage, settings) : video.previewImage || '',
+    poster: video.previewImage || '',
     name: video.displayName || video.name,
     originalName: video.name,
     category: video.category,
     subcategories: video.subcategories || [],
+    tags: video.tags || [],
     timeOfDay: video.timeOfDay || '',
     locationName: video.locationName || '',
     locationCountry: video.locationCountry || '',
     description: video.description || '',
     videoLibrary: library,
-    sourceName: video.sourceName || (library === 'apple' ? 'Apple' : ''),
+    sourceName: video.sourceName || '',
     sourcePage: video.sourcePage || '',
     license: video.license || '',
     attribution: video.attribution || '',
@@ -207,6 +169,31 @@ function shuffleHistoryFor(settings, items) {
 function saveShuffleHistory(cache, key, history) {
   cache[key] = history;
   setCache(VIDEO_SHUFFLE_CACHE_KEY, cache);
+}
+
+function shuffledItems(items, currentId) {
+  const result = items.slice();
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const current = result[index];
+    result[index] = result[swapIndex];
+    result[swapIndex] = current;
+  }
+
+  if (currentId && result.length > 1 && result[0].id === currentId) {
+    const swapIndex = result.findIndex((item) => item.id !== currentId);
+    if (swapIndex > 0) {
+      const current = result[0];
+      result[0] = result[swapIndex];
+      result[swapIndex] = current;
+    }
+  }
+
+  return result;
+}
+
+function shuffledVideoQueue(settings, currentId) {
+  return shuffledItems(itemsForSettings(settings), currentId);
 }
 
 function recordPickedVideo(settings, items, picked) {
@@ -245,10 +232,9 @@ function pickVideo(settings, currentId) {
   return picked;
 }
 
-function categoryLabel(value, library = DEFAULT_VIDEO_LIBRARY) {
-  const options = categoryOptionsForLibrary(library);
-  const option = options.find((item) => item.value === value);
-  return option ? option.label : options[0].label;
+function categoryLabel(value) {
+  const option = CATEGORY_OPTIONS.find((item) => item.value === value);
+  return option ? option.label : CATEGORY_OPTIONS[0].label;
 }
 
 module.exports = {
@@ -258,5 +244,6 @@ module.exports = {
   categoryOptionsForLibrary,
   videoById,
   pickVideo,
+  shuffledVideoQueue,
   categoryLabel,
 };

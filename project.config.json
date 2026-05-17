@@ -33,12 +33,20 @@
       {
         "type": "file",
         "value": "miniprogram/README.md"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/data/apple-aerial-1080.js"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram/data/video-intros.js"
       }
     ],
     "include": []
   },
   "appid": "wx8566982d6a0e0ded",
-  "projectname": "Macify",
+  "projectname": "呼吸Zen",
   "miniprogramRoot": "miniprogram/",
   "editorSetting": {}
 }

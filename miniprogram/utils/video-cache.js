@@ -27,7 +27,7 @@ function sourceVersionFor(settings) {
 function localPathFor(video) {
   const dir = cacheDir();
   if (!dir || !video || !video.id) return '';
-  const library = sanitizeFileName(video.videoLibrary || 'apple');
+  const library = sanitizeFileName(video.videoLibrary || activeVideoLibrary({}));
   return `${dir}/${library}-${sanitizeFileName(video.id)}.mp4`;
 }
 

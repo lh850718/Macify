@@ -209,6 +209,118 @@ npm run mini:premium:validate
 - 用户主动向上滑动切换视频时，播放本次队列中的下一条。
 - 本地缓存只保留最近一条，避免越积越多。
 
+### 首页环境音策略
+
+- 首页背景视频默认无声音；每次退出、切后台或重新进入小程序，都必须恢复为无声音。
+- 首页右下角 `♪` 是环境音开关。用户点开后，只在当前视频有明确匹配音频时播放；没有匹配音频的视频保持静音并提示“当前视频暂无匹配音频”。
+- 呼吸页也保留同一个 `♪` 环境音开关。首页进入呼吸页、呼吸页返回首页时必须保持同一个环境音开关状态；呼吸页的 `颂钵音` 仍是独立功能，不与首页环境音共用状态。
+- 环境音使用 `wx.createInnerAudioContext({ useWebAudioImplement: true })`；循环播放不依赖硬 `loop`，而是在接近结尾时启动第二个同源音频实例，并用约 `2.6s` 交叉淡入淡出，避免循环断点。
+- 环境音切换视频时，如果新视频映射到另一种音频，也使用旧音频淡出、新音频淡入；如果新视频没有映射音频，则自动关闭首页环境音。
+- 少数视频允许多轨混音。多轨时每条音轨都必须有独立的播放 channel、独立循环定时器和独立交叉淡入淡出管理，不能共用一个全局 current/next 音频实例。
+- 音量必须克制。已用 `ffmpeg volumedetect` 检查原始音频响度，并转码出上线用 128kbps MP3；代码里还按素材实际响度设置单独 `volume`，避免交叉叠放时过吵或过弱。
+- 环境音映射只做窄匹配，不硬配。城市、星空、烟火、火山、机械、黑胶、猫、部分山云/瀑布等当前没有足够贴合的音频，保持无音频。
+- 环境音映射表在：
+
+```text
+miniprogram/data/ambient-audio.js
+```
+
+- 当前环境音 COS base：
+
+```text
+https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-audio
+```
+
+- 当前上传并验证通过的环境音文件：
+
+```text
+macify-audio/ocean-soft-waves.mp3
+macify-audio/gentle-ocean-waves-birdsong-and-gull.mp3
+macify-audio/underwater-ambience.mp3
+macify-audio/forest-ambience.mp3
+macify-audio/forest-wind-and-birds.mp3
+macify-audio/river-stream.mp3
+macify-audio/waterfall.mp3
+macify-audio/mountain-sky-ambience.mp3
+macify-audio/birds.mp3
+macify-audio/wind-in-trees.mp3
+macify-audio/light-rain.mp3
+macify-audio/fire-crackling.mp3
+macify-audio/tractor-harvesting.mp3
+```
+
+- 当前待上传 COS 的环境音文件：
+
+```text
+无
+```
+
+- 本地转码产物目录是：
+
+```text
+local-miniprogram-ambient-audio/
+```
+
+该目录已加入 `.gitignore`，不要打进小程序包。环境音走远程 COS，不放入 `miniprogram/assets/`。
+
+当前 99 条公开视频的环境音映射统计（按音轨计数；多轨视频会在多个音轨里各计 1 次）：
+
+```text
+海浪 ocean-soft-waves.mp3: 16 条
+海鸥海浪 gentle-ocean-waves-birdsong-and-gull.mp3: 1 条
+水下 underwater-ambience.mp3: 22 条
+森林 forest-ambience.mp3: 5 条
+山林风鸟 forest-wind-and-birds.mp3: 3 条
+鸟鸣 birds.mp3: 5 条
+雨声 light-rain.mp3: 2 条
+炉火 fire-crackling.mp3: 3 条
+溪流 river-stream.mp3: 3 条
+瀑布 waterfall.mp3: 5 条
+风声 wind-in-trees.mp3: 3 条
+天空 mountain-sky-ambience.mp3: 17 条
+收割机 tractor-harvesting.mp3: 1 条
+无音频: 16 条
+```
+
+当前用户指定的强制映射 / 排除：
+
+```text
+阿尔卑斯山径 pixabay-305657 -> forest-wind-and-birds.mp3
+淡水鱼群 pixabay-108366 -> underwater-ambience.mp3
+苔径深林 pixabay-287510 -> river-stream.mp3
+麦田收割 pixabay-232561 -> tractor-harvesting.mp3
+雪羽海鸥 pixabay-191159 -> wind-in-trees.mp3
+樱光春枝 pixabay-268528 -> 无音频
+落日泻湖 mixkit-sunset-reveal-over-scenic-lagoon-101208 -> mountain-sky-ambience.mp3
+里斯本圣像 pixabay-260895 -> mountain-sky-ambience.mp3
+瑞士雾海 pixabay-260397 -> wind-in-trees.mp3
+青苔溪石 pixabay-271161 -> waterfall.mp3
+金云暮天 pixabay-204006 -> mountain-sky-ambience.mp3
+云隙光束 pixabay-221180 -> mountain-sky-ambience.mp3
+尼亚加拉白潮 pixabay-28707 -> waterfall.mp3
+雪河气泡 pixabay-159703 -> river-stream.mp3
+云峰落日 pixabay-347325 -> mountain-sky-ambience.mp3
+摩纳哥港 pixabay-323513 -> mountain-sky-ambience.mp3
+春林直道 pixabay-266987 -> mountain-sky-ambience.mp3 + birds.mp3（sky 为主）
+富士晨塔 pixabay-240841 -> mountain-sky-ambience.mp3 + birds.mp3（sky 音量 1.0，鸟声 0.08）
+山涧白瀑 pixabay-228847 -> waterfall.mp3
+古堡帆影 pixabay-175876 -> mountain-sky-ambience.mp3 + wind-in-trees.mp3（低音量轻混）
+暮海群鸥 pixabay-140111 -> gentle-ocean-waves-birdsong-and-gull.mp3
+稻田风机 pixabay-307864 -> mountain-sky-ambience.mp3
+西峡鸟影 pixabay-276047 -> mountain-sky-ambience.mp3
+山田星田 pixabay-283431 -> mountain-sky-ambience.mp3
+雪原冷林 pixabay-325502 -> mountain-sky-ambience.mp3
+晴空云影 pixabay-111179 -> mountain-sky-ambience.mp3
+晨雾阿尔卑斯 pixabay-328740 -> mountain-sky-ambience.mp3
+东京暮色 mixkit-aerial-view-of-a-city-during-the-night-4308 -> mountain-sky-ambience.mp3
+东京夜城 mixkit-city-of-tokyo-at-night-4383 -> mountain-sky-ambience.mp3
+冰岛火丘 pixabay-253436 -> mountain-sky-ambience.mp3
+木舟渔人 pixabay-181376 -> birds.mp3
+雏鸭草间 pixabay-265501 -> forest-wind-and-birds.mp3
+```
+
+瀑布类通用匹配到 `waterfall.mp3`，包括但不限于 `岩瀑白浪`、`青苔溪石`、`山涧白瀑`、`多洛米蒂瀑河`、`尼亚加拉白潮`。阿尔卑斯 / Alps 类通用匹配到 `forest-wind-and-birds.mp3`。
+
 ### 呼吸节奏与自定义练习策略
 
 - 设置页“呼吸节奏”区提供两类设置：`默认呼吸` 和 `自定义练习`。
@@ -268,6 +380,12 @@ npm run mini:premium:validate
 
 ```text
 macify-premium/
+```
+
+- 首页环境音上传只走：
+
+```text
+macify-audio/
 ```
 
 - 永远不要上传到或覆盖：
@@ -341,7 +459,7 @@ https://video.huxizen.com
 - 腾讯云当前这单是 `huxizen.com` 的网站/域名 ICP 备案，主要服务于后续 `video.huxizen.com` CDN 域名。
 - 微信公众平台里还要检查小程序本体备案状态。若后台显示小程序未备案或待补充备案，必须在微信公众平台完成小程序备案后才能最终发布。
 
-当前小程序只用 `wx.request` 获取天气、`wx.downloadFile` 缓存视频；没有 `wx.login`、`wx.getUserProfile`、`wx.getLocation`、上传文件、支付、订阅消息或用户事件上报。隐私指引里不要声明不存在的数据采集；若后续增加定位、openid、统计或收藏上报，必须同步更新隐私保护指引。
+当前小程序只用 `wx.request` 获取天气、`wx.downloadFile` 缓存视频、`wx.createInnerAudioContext` 播放用户手动开启的 COS 环境音；没有 `wx.login`、`wx.getUserProfile`、`wx.getLocation`、上传文件、支付、订阅消息或用户事件上报。隐私指引里不要声明不存在的数据采集；若后续增加定位、openid、统计或收藏上报，必须同步更新隐私保护指引。
 
 ### 当前下一步
 
@@ -570,7 +688,222 @@ pixabay-4006
 
 分类映射：用户“动植物”进入 `AnimalsAndPlants`；用户“自然”进入 `Landscapes`；用户“生活人物”的 `pixabay-185096` 因公开版无该枚举且画面核心为海边书页与海岸环境，暂归 `Landscapes` 并在 `subcategories` / `tags` 保留 `Book` / `Literature` / `Beach` / `Ocean`。上传同步显示 7 个新视频上传、92 个历史视频跳过；已给 99 条 ready 视频补 `public-read` ACL，并逐条验证本轮 7 个 COS 地址与远端 `manifest.json` 均为 `200 OK`，视频为 `Content-Type: video/mp4`。版权页的 Pixabay 平台声明已存在，授权记录页会按 `published` 条目自动纳入“公开素材 / Pixabay”列表。已将 `PREMIUM_FREE_AERIAL_SOURCE_VERSION` bump 到 `premium-free-aerial-1080p-cos-20260514-99`，更新后会失效旧 Premium 本地缓存。
 
-继续工作时可以继续找下一批候选。下一次上传 COS 前必须重新向用户索取新的 `COS_SECRET_ID` / `COS_SECRET_KEY`，且只允许上传到 `macify-premium/videos/`。
+2026-05-16 新增首页环境音。用户下载的原始音频位于 `/Users/hui/Downloads/sound/`，当前只选用与视频画面明确贴合的 6 类：海浪、水下、森林、鸟鸣、雨声、炉火；其他音频和没有贴合画面的类别暂不硬配。已新增：
+
+```text
+miniprogram/data/ambient-audio.js
+```
+
+首页新增右下角 `♪` 环境音开关。默认无声音；每次退出、切后台或重新进入小程序都会关闭；首页和呼吸页之间切换时保持同一个环境音开关状态。当前视频无匹配音频时提示“当前视频暂无匹配音频”。环境音通过 `wx.createInnerAudioContext({ useWebAudioImplement: true })` 播放，循环时使用两个音频实例约 `2.6s` 交叉淡入淡出；切换到不同环境音时也做淡入淡出。呼吸页 `颂钵音` 仍使用 `miniprogram/assets/breath.mp3`，与首页环境音互不共享状态。
+
+`miniprogram/utils/videos.js` 已把 `tags` 暴露给首页视频对象，供 `ambientTrackForVideo` 做窄匹配。当前 99 条发布视频的映射统计：
+
+```text
+海浪 ocean-soft-waves.mp3: 19 条
+水下 underwater-ambience.mp3: 22 条
+森林 forest-ambience.mp3: 13 条
+鸟鸣 birds.mp3: 6 条
+雨声 light-rain.mp3: 2 条
+炉火 fire-crackling.mp3: 3 条
+无音频: 34 条
+```
+
+完整映射以 `miniprogram/data/ambient-audio.js` 的规则实时计算。当前明确不配音频的类型包括城市、星空、烟火、火山、机械、黑胶、猫、部分山云/瀑布等，避免声音和画面不贴。
+
+已用 `ffmpeg loudnorm` / `volumedetect` 把 6 个上线用 MP3 转成 128kbps 并检查响度，输出目录：
+
+```text
+local-miniprogram-ambient-audio/audio/
+```
+
+该目录已加入 `.gitignore`，不要提交或打包进小程序。当前上线音频已上传到腾讯云 COS：
+
+```text
+macify-audio/birds.mp3
+macify-audio/fire-crackling.mp3
+macify-audio/forest-ambience.mp3
+macify-audio/light-rain.mp3
+macify-audio/ocean-soft-waves.mp3
+macify-audio/underwater-ambience.mp3
+```
+
+公开视频 URL 均已验证为 `HTTP 200 OK` / `Content-Type: audio/mpeg` / `Cache-Control: public,max-age=2592000,immutable`，示例：
+
+```text
+https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-audio/ocean-soft-waves.mp3
+```
+
+上传时第一次 `sync` 误把本地目录名带到了 COS，额外生成了：
+
+```text
+macify-audio/audio/*.mp3
+```
+
+这份多余对象不被代码引用，不影响小程序；后续可清理以节省约 12MB COS 空间，但不要误删正确的 `macify-audio/*.mp3`。用户在聊天中提供过 `macify-cos-uploader` 的 SecretId/SecretKey；本次只作为命令环境变量使用，未写入文档或文件。上传完成后必须提醒用户禁用或删除该 API 密钥。
+
+本次已执行：
+
+```bash
+node --check miniprogram/pages/index/index.js
+node --check miniprogram/utils/videos.js
+node --check miniprogram/data/ambient-audio.js
+npm run mini:premium:validate
+```
+
+2026-05-16 继续微调首页环境音映射。用户指定：
+
+```text
+阿尔卑斯山径 -> forest-wind-and-birds.mp3
+淡水鱼群 -> underwater-ambience.mp3
+苔径深林 -> river-stream.mp3
+麦田收割 -> tractor-harvesting.mp3
+多洛米蒂瀑河、岩瀑白浪等瀑布类 -> waterfall.mp3
+雪羽海鸥 -> wind-in-trees.mp3
+樱光春枝 -> 无音频
+```
+
+已在 `miniprogram/data/ambient-audio.js` 增加显式视频覆盖规则，避免具体视频被通用规则抢错；同时新增 `waterfall`、`river`、`wind`、`tractor`、`forestWindBirds` 音轨。新增本地转码文件：
+
+```text
+local-miniprogram-ambient-audio/audio/forest-wind-and-birds.mp3
+local-miniprogram-ambient-audio/audio/river-stream.mp3
+local-miniprogram-ambient-audio/audio/waterfall.mp3
+local-miniprogram-ambient-audio/audio/wind-in-trees.mp3
+local-miniprogram-ambient-audio/audio/tractor-harvesting.mp3
+```
+
+这些新增 MP3 已做 128kbps 转码和响度检查，并已于 2026-05-16 23:21 上传 COS。上传目标是：
+
+```text
+macify-audio/
+```
+
+新增文件均已逐条验证为 `HTTP 200 OK` / `Content-Type: audio/mpeg` / `Cache-Control: public,max-age=2592000,immutable`：
+
+```text
+macify-audio/forest-wind-and-birds.mp3
+macify-audio/river-stream.mp3
+macify-audio/waterfall.mp3
+macify-audio/wind-in-trees.mp3
+macify-audio/tractor-harvesting.mp3
+```
+
+本次上传只在当前命令进程中使用用户重新提供的 `COS_SECRET_ID` / `COS_SECRET_KEY`，未写入仓库、文档或脚本；临时配置 `/private/tmp/macify-cos-audio.yaml` 已删除。上传后应提醒用户禁用或删除 `macify-cos-uploader` 的本次 API 密钥。
+
+本次调整后的映射统计：
+
+```text
+海浪: 19
+水下: 23
+森林: 8
+山林风鸟: 4
+鸟鸣: 5
+雨声: 2
+炉火: 3
+溪流: 2
+瀑布: 5
+风声: 1
+收割机: 1
+无音频: 26
+```
+
+2026-05-16 继续按用户指定微调环境音：`落日泻湖`、`金云暮天`、`里斯本圣像`、`云隙光束` 改为 `mountain-sky-ambience.mp3`；`瑞士雾海` 改为 `wind-in-trees.mp3`；`雪河气泡` 改为 `river-stream.mp3`；`尼亚加拉白潮`、`青苔溪石` 明确覆盖为 `waterfall.mp3`。代码里均写为视频级覆盖，不把 `sky` 做成全局泛匹配。
+
+本地已从 `/Users/hui/Downloads/sound/mountain and sky ambience.mp3` 转码出：
+
+```text
+local-miniprogram-ambient-audio/audio/mountain-sky-ambience.mp3
+```
+
+该文件为 128kbps MP3，约 48.024 秒，响度检查约 `mean_volume: -29.7 dB` / `max_volume: -17.5 dB`。已于 2026-05-16 23:30 上传 COS，并验证为 `HTTP 200 OK` / `Content-Type: audio/mpeg` / `Cache-Control: public,max-age=2592000,immutable`：
+
+```text
+macify-audio/mountain-sky-ambience.mp3
+```
+
+本次上传只在当前命令进程中使用用户重新提供的 `COS_SECRET_ID` / `COS_SECRET_KEY`，未写入仓库、文档或脚本；临时配置 `/private/tmp/macify-cos-audio.yaml` 已删除。上传后应提醒用户禁用或删除 `macify-cos-uploader` 的本次 API 密钥。
+
+本次调整后的映射统计：
+
+```text
+海浪: 18
+水下: 22
+森林: 8
+山林风鸟: 3
+鸟鸣: 5
+雨声: 2
+炉火: 3
+溪流: 3
+瀑布: 5
+风声: 2
+天空: 4
+收割机: 1
+无音频: 23
+```
+
+2026-05-16 继续按用户指定微调环境音并升级首页多轨混音：`富士晨塔`、`春林直道` 使用 `mountain-sky-ambience.mp3 + birds.mp3`，sky 为主、鸟鸣轻铺；`古堡帆影` 使用 `mountain-sky-ambience.mp3 + wind-in-trees.mp3`，两条都压低音量以保持安静；`山涧白瀑` 明确使用 `waterfall.mp3`；`摩纳哥港`、`云峰落日` 使用 `mountain-sky-ambience.mp3`；`淡水鱼群` 保持 `underwater-ambience.mp3`；`暮海群鸥` 使用新音频 `gentle-ocean-waves-birdsong-and-gull.mp3`。
+
+为支持多轨，`miniprogram/data/ambient-audio.js` 现在可以返回 `tracks[]`；`miniprogram/pages/index/index.js` 将首页环境音拆成多个独立 channel。每个 channel 维护自己的 current audio、下一段 loop 定时器和淡入淡出 timer；多轨混音不会共用一个全局 current/next，也不会让一条音轨的 loop 干扰另一条音轨。
+
+本地已从 `/Users/hui/Downloads/sound/gentle-ocean-waves-birdsong-and-gull.mp3` 转码出：
+
+```text
+local-miniprogram-ambient-audio/audio/gentle-ocean-waves-birdsong-and-gull.mp3
+```
+
+该文件为 128kbps MP3，约 115.152 秒，响度检查约 `mean_volume: -34.9 dB` / `max_volume: -16.9 dB`。已于 2026-05-16 23:43 上传 COS，并验证为 `HTTP 200 OK` / `Content-Type: audio/mpeg` / `Cache-Control: public,max-age=2592000,immutable`：
+
+```text
+macify-audio/gentle-ocean-waves-birdsong-and-gull.mp3
+```
+
+本次上传只在当前命令进程中使用用户重新提供的 `COS_SECRET_ID` / `COS_SECRET_KEY`，未写入仓库、文档或脚本；临时配置 `/private/tmp/macify-cos-audio.yaml` 已删除。上传后应提醒用户禁用或删除 `macify-cos-uploader` 的本次 API 密钥。
+
+本次调整后的映射统计（按音轨计数，多轨视频会在多个音轨里各计 1 次）：
+
+```text
+海浪: 16
+海鸥海浪: 1
+水下: 22
+森林: 6
+山林风鸟: 3
+鸟鸣: 6
+雨声: 2
+炉火: 3
+溪流: 3
+瀑布: 5
+风声: 3
+天空: 9
+收割机: 1
+无音频: 22
+```
+
+2026-05-16 继续按用户指定微调环境音：`稻田风机`、`西峡鸟影`、`山田星田`、`雪原冷林`、`晴空云影`、`晨雾阿尔卑斯`、`东京暮色`、`东京夜城` 改为 `mountain-sky-ambience.mp3`；`木舟渔人` 改为 `birds.mp3`；`雏鸭草间` 改为 `forest-wind-and-birds.mp3`。本次只使用已上传音频，不需要新增转码或上传 COS。
+
+2026-05-16 用户要求单独调整 `富士晨塔` 混音：`mountain-sky-ambience.mp3` 音量加大一倍，实际设置到小程序音量上限 `1.0`；`birds.mp3` 鸟声降低 50%，从 `0.16` 改为 `0.08`。只影响 `pixabay-240841`，不改变 `春林直道` 的 sky + birds 混音比例。
+
+2026-05-16 继续按用户指定微调环境音：`冰岛火丘` 改为 `mountain-sky-ambience.mp3`。本次只使用已上传音频，不需要新增转码或上传 COS。
+
+本次调整后的映射统计（按音轨计数，多轨视频会在多个音轨里各计 1 次）：
+
+```text
+海浪: 16
+海鸥海浪: 1
+水下: 22
+森林: 5
+山林风鸟: 3
+鸟鸣: 5
+雨声: 2
+炉火: 3
+溪流: 3
+瀑布: 5
+风声: 3
+天空: 18
+收割机: 1
+无音频: 15
+```
+
+继续工作时可以继续找下一批候选。下一次上传 COS 前必须重新向用户索取新的 `COS_SECRET_ID` / `COS_SECRET_KEY`。视频只允许上传到 `macify-premium/videos/`；首页环境音只允许上传到 `macify-audio/`；不要触碰 Apple 历史路径 `macify/videos/`。
 
 ### 2026-05-10 暂停交接：Pixabay 批量候选待继续
 

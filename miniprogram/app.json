@@ -1,10 +1,11 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/settings/settings"
+    "pages/settings/settings",
+    "pages/licenses/licenses"
   ],
   "window": {
-    "navigationBarTitleText": "Macify",
+    "navigationBarTitleText": "呼吸Zen",
     "backgroundColor": "#05070a",
     "backgroundTextStyle": "light"
   },

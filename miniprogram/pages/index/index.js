@@ -8,6 +8,7 @@ const { pickQuote } = require('../../utils/quotes.js');
 const { shuffledVideoQueue, videoById } = require('../../utils/videos.js');
 const { cachedVideoForSettings, cacheVideo } = require('../../utils/video-cache.js');
 const { getForecast, describeWeather } = require('../../utils/weather.js');
+const { ambientTrackForVideo } = require('../../data/ambient-audio.js');
 
 const BREATH_HAPTIC_BASE_MS = 5000;
 const BREATH_SCALE_MIN = 0.45;
@@ -27,6 +28,9 @@ const ZEN_AUDIO_VOLUME = 0.55;
 const ZEN_AUDIO_FALLBACK_DURATION_MS = 63384;
 const ZEN_AUDIO_CROSSFADE_MS = 2200;
 const ZEN_AUDIO_FADE_STEP_MS = 100;
+const AMBIENT_AUDIO_CROSSFADE_MS = 2600;
+const AMBIENT_AUDIO_FADE_STEP_MS = 100;
+const AMBIENT_AUDIO_STOP_FADE_MS = 900;
 const VIDEO_REVEAL_MS = 520;
 const VIDEO_LOOP_CROSSFADE_MS = 3000;
 const VIDEO_LOOP_PRELOAD_LEAD_MS = 3500;
@@ -85,7 +89,9 @@ function vibrateShort(type) {
 }
 
 function clampVolume(value) {
-  return Math.max(0, Math.min(ZEN_AUDIO_VOLUME, value));
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Math.min(1, number));
 }
 
 function setAudioVolume(audio, volume) {
@@ -93,11 +99,11 @@ function setAudioVolume(audio, volume) {
   try {
     audio.volume = clampVolume(volume);
   } catch (error) {
-    console.warn('Zen cue volume update failed:', error);
+    console.warn('Audio volume update failed:', error);
   }
 }
 
-function createZenAudio(src, volume) {
+function createManagedAudio(src, volume, label) {
   if (!wx.createInnerAudioContext) return null;
   let audio = null;
   try {
@@ -113,10 +119,18 @@ function createZenAudio(src, volume) {
   audio.obeyMuteSwitch = true;
   if (audio.onError) {
     audio.onError((error) => {
-      console.warn('Zen cue audio failed:', error);
+      console.warn(`${label} audio failed:`, error);
     });
   }
   return audio;
+}
+
+function createZenAudio(src, volume) {
+  return createManagedAudio(src, volume, 'Zen cue');
+}
+
+function createAmbientAudio(src, volume) {
+  return createManagedAudio(src, volume, 'Ambient');
 }
 
 function otherVideoSlot(slot) {
@@ -275,6 +289,9 @@ Page({
     videoLoopRevealing: false,
     videoFallbackUsed: false,
     videoOnlyActive: false,
+    ambientSoundOn: false,
+    ambientTrackAvailable: false,
+    ambientTrackLabel: '',
     zenActive: false,
     zenBreathMode: 'default',
     zenPhaseText: '',
@@ -299,6 +316,10 @@ Page({
     this.videoLoopPending = false;
     this.videoLoopIncomingSlot = '';
     this.videoLoopPlaybackStarted = false;
+    this.ambientAudioPlayers = [];
+    this.ambientAudioChannels = {};
+    this.ambientAudioCurrent = null;
+    this.ambientAudioTrackId = '';
     this.loadSettingsAndContent();
     this.startClock();
   },
@@ -313,10 +334,12 @@ Page({
     this.clearVideoTransitionTimer();
     this.clearVideoLoopState();
     this.clearVideoMessageTimer();
+    this.stopAmbientAudio();
     this.stopZenCues();
   },
 
   onHide() {
+    this.resetAmbientSound();
     this.stopZenCues();
   },
 
@@ -440,10 +463,13 @@ Page({
     }
     this.clearVideoLoopState();
     this.clearVideoMessageTimer();
+    const ambientTrack = next ? ambientTrackForVideo(next) : null;
     const videoData = {
       currentVideo: next,
       currentVideoIntro: next ? next.description || '' : '',
       currentVideoFavorited: next ? isFavoriteVideo(next) : false,
+      ambientTrackAvailable: !!ambientTrack,
+      ambientTrackLabel: ambientTrack ? ambientTrack.label : '',
       videoIntroVisible: false,
       videoReady: false,
       videoFallbackUsed: false,
@@ -453,6 +479,7 @@ Page({
     };
     const afterVideoSet = () => {
       if (next && !options.skipCache) this.cacheCurrentVideo(next);
+      if (this.data.ambientSoundOn) this.syncAmbientAudioForCurrentVideo();
     };
 
     this.clearVideoTransitionTimer();
@@ -470,7 +497,7 @@ Page({
         videoTransitionStage: 'idle',
         videoLoopCrossfading: false,
         videoLoopRevealing: false,
-      });
+      }, () => this.resetAmbientSound());
       return;
     }
 
@@ -903,6 +930,418 @@ Page({
       icon: 'none',
       duration: result.favorited ? 2600 : 1500,
     });
+  },
+
+  currentAmbientTrack() {
+    return ambientTrackForVideo(this.data.currentVideo);
+  },
+
+  toggleAmbientSound() {
+    if (this.data.ambientSoundOn) {
+      this.setData({ ambientSoundOn: false });
+      this.fadeOutAmbientAudio();
+      return;
+    }
+
+    const track = this.currentAmbientTrack();
+    if (!track) {
+      wx.showToast({
+        title: '当前视频暂无匹配音频',
+        icon: 'none',
+        duration: 1500,
+      });
+      return;
+    }
+
+    this.setData({
+      ambientSoundOn: true,
+      ambientTrackAvailable: true,
+      ambientTrackLabel: track.label,
+    }, () => {
+      this.switchAmbientTrack(track);
+    });
+  },
+
+  resetAmbientSound() {
+    this.stopAmbientAudio();
+    if (this.data.ambientSoundOn) {
+      this.setData({ ambientSoundOn: false });
+    }
+  },
+
+  syncAmbientAudioForCurrentVideo() {
+    if (!this.data.ambientSoundOn) return;
+    const track = this.currentAmbientTrack();
+    if (!track) {
+      this.setData({
+        ambientSoundOn: false,
+        ambientTrackAvailable: false,
+        ambientTrackLabel: '',
+      });
+      this.fadeOutAmbientAudio();
+      return;
+    }
+
+    this.setData({
+      ambientTrackAvailable: true,
+      ambientTrackLabel: track.label,
+    });
+    this.switchAmbientTrack(track);
+  },
+
+  switchAmbientTrack(track) {
+    if (this.ambientAudioFadeTimer) {
+      clearInterval(this.ambientAudioFadeTimer);
+      this.ambientAudioFadeTimer = null;
+    }
+
+    const tracks = this.ambientTracksForMix(track);
+    if (!tracks.length) return;
+
+    const activeKeys = {};
+    tracks.forEach((item) => {
+      const key = this.ambientAudioChannelKey(item);
+      if (key) activeKeys[key] = true;
+    });
+
+    Object.keys(this.ambientAudioChannels || {}).forEach((key) => {
+      if (!activeKeys[key]) this.fadeOutAmbientChannel(key);
+    });
+
+    tracks.forEach((item) => this.switchAmbientChannelTrack(item));
+    this.ambientAudioTrackId = track.id || tracks.map((item) => this.ambientAudioChannelKey(item)).join('+');
+  },
+
+  ambientTracksForMix(track) {
+    if (!track) return [];
+    if (Array.isArray(track.tracks)) return track.tracks.filter((item) => item && item.url);
+    return track.url ? [track] : [];
+  },
+
+  ambientAudioChannelKey(track) {
+    if (!track) return '';
+    return track.channelId || track.id || track.file || '';
+  },
+
+  ensureAmbientAudioChannel(key) {
+    if (!this.ambientAudioChannels) this.ambientAudioChannels = {};
+    if (!this.ambientAudioChannels[key]) {
+      this.ambientAudioChannels[key] = {
+        key,
+        current: null,
+        nextTimer: null,
+        fadeTimer: null,
+        targetVolume: 0,
+        track: null,
+      };
+    }
+    return this.ambientAudioChannels[key];
+  },
+
+  switchAmbientChannelTrack(track) {
+    const key = this.ambientAudioChannelKey(track);
+    if (!key || !track.url) return;
+
+    const channel = this.ensureAmbientAudioChannel(key);
+    const targetVolume = clampVolume(track.volume);
+    channel.track = track;
+    channel.targetVolume = targetVolume;
+
+    if (channel.current) {
+      channel.current.__ambientTrack = track;
+      channel.current.__ambientTargetVolume = targetVolume;
+      this.destroyAmbientChannelInactivePlayers(key);
+      this.scheduleAmbientAudioCrossfade(key, channel.current);
+      this.fadeAmbientChannelToVolume(key, targetVolume, AMBIENT_AUDIO_CROSSFADE_MS);
+      return;
+    }
+
+    const next = this.startAmbientAudioTrack(track, 0, key);
+    if (!next) return;
+
+    channel.current = next;
+    this.scheduleAmbientAudioCrossfade(key, next);
+    this.fadeAmbientChannelToVolume(key, targetVolume, AMBIENT_AUDIO_CROSSFADE_MS);
+  },
+
+  startAmbientAudioTrack(track, volume, channelKey) {
+    const audio = createAmbientAudio(track.url, volume);
+    if (!audio) return null;
+
+    audio.__ambientTrack = track;
+    audio.__ambientChannelKey = channelKey;
+    audio.__ambientTargetVolume = clampVolume(track.volume);
+    audio.__ambientLastVolume = clampVolume(volume);
+    audio.__ambientCrossfadeStarted = false;
+    this.ambientAudioPlayers = this.ambientAudioPlayers || [];
+    this.ambientAudioPlayers.push(audio);
+
+    if (audio.onTimeUpdate) {
+      audio.onTimeUpdate(() => {
+        const channel = this.ambientAudioChannels && this.ambientAudioChannels[channelKey];
+        if (!channel || audio !== channel.current || audio.__ambientCrossfadeStarted) return;
+        const duration = Number(audio.duration) || (track.durationMs || 0) / 1000;
+        if (duration && audio.currentTime >= duration - AMBIENT_AUDIO_CROSSFADE_MS / 1000) {
+          this.crossfadeAmbientAudio(channelKey);
+        }
+      });
+    }
+
+    if (audio.onEnded) {
+      audio.onEnded(() => {
+        const channel = this.ambientAudioChannels && this.ambientAudioChannels[channelKey];
+        if (!channel || audio !== channel.current) return;
+        if (!this.data.ambientSoundOn) return;
+        this.crossfadeAmbientAudio(channelKey, true);
+      });
+    }
+
+    try {
+      if (audio.seek) audio.seek(0);
+      audio.play();
+    } catch (error) {
+      console.warn('Ambient playback failed:', error);
+    }
+    return audio;
+  },
+
+  scheduleAmbientAudioCrossfade(channelKey, audio) {
+    const channel = this.ambientAudioChannels && this.ambientAudioChannels[channelKey];
+    if (!channel) return;
+    this.clearAmbientChannelNextTimer(channel);
+    const track = audio && audio.__ambientTrack;
+    if (!track || !track.durationMs) return;
+    channel.nextTimer = setTimeout(() => {
+      const currentChannel = this.ambientAudioChannels && this.ambientAudioChannels[channelKey];
+      if (currentChannel && audio === currentChannel.current) this.crossfadeAmbientAudio(channelKey);
+    }, Math.max(0, track.durationMs - AMBIENT_AUDIO_CROSSFADE_MS));
+  },
+
+  crossfadeAmbientAudio(channelKey, immediate = false) {
+    if (!this.data.ambientSoundOn) return;
+    const channel = this.ambientAudioChannels && this.ambientAudioChannels[channelKey];
+    if (!channel) return;
+    const previous = channel.current;
+    const track = channel.track || (previous && previous.__ambientTrack);
+    if (!track) return;
+    if (previous && previous.__ambientCrossfadeStarted) return;
+    if (previous) previous.__ambientCrossfadeStarted = true;
+
+    const next = this.startAmbientAudioTrack(track, immediate ? channel.targetVolume : 0, channelKey);
+    if (!next) return;
+
+    channel.current = next;
+    this.scheduleAmbientAudioCrossfade(channelKey, next);
+
+    if (immediate || !previous) {
+      this.destroyAmbientAudio(previous);
+      setAudioVolume(next, channel.targetVolume);
+      return;
+    }
+
+    this.fadeAmbientAudioPair(
+      channelKey,
+      previous,
+      next,
+      previous.__ambientLastVolume == null ? previous.__ambientTargetVolume : previous.__ambientLastVolume,
+      channel.targetVolume,
+      AMBIENT_AUDIO_CROSSFADE_MS,
+    );
+  },
+
+  fadeAmbientAudioPair(channelKey, previous, next, previousVolume, nextVolume, durationMs) {
+    const channel = this.ambientAudioChannels && this.ambientAudioChannels[channelKey];
+    if (!channel) return;
+    this.clearAmbientChannelFadeTimer(channel);
+    const steps = Math.max(1, Math.ceil(durationMs / AMBIENT_AUDIO_FADE_STEP_MS));
+    let step = 0;
+
+    channel.fadeTimer = setInterval(() => {
+      step += 1;
+      const progress = Math.min(1, step / steps);
+      const previousNextVolume = clampVolume(previousVolume * (1 - progress));
+      const nextNextVolume = clampVolume(nextVolume * progress);
+      if (previous) {
+        previous.__ambientLastVolume = previousNextVolume;
+        setAudioVolume(previous, previousNextVolume);
+      }
+      if (next) {
+        next.__ambientLastVolume = nextNextVolume;
+        setAudioVolume(next, nextNextVolume);
+      }
+
+      if (progress < 1) return;
+      this.clearAmbientChannelFadeTimer(channel);
+      this.destroyAmbientAudio(previous);
+      if (next) {
+        next.__ambientLastVolume = clampVolume(nextVolume);
+        setAudioVolume(next, next.__ambientLastVolume);
+      }
+    }, AMBIENT_AUDIO_FADE_STEP_MS);
+  },
+
+  fadeAmbientChannelToVolume(channelKey, targetVolume, durationMs) {
+    const channel = this.ambientAudioChannels && this.ambientAudioChannels[channelKey];
+    const audio = channel && channel.current;
+    if (!channel || !audio) return;
+
+    const startVolume = audio.__ambientLastVolume == null ? audio.__ambientTargetVolume || 0 : audio.__ambientLastVolume;
+    const endVolume = clampVolume(targetVolume);
+    audio.__ambientTargetVolume = endVolume;
+    if (Math.abs(startVolume - endVolume) < 0.01) {
+      audio.__ambientLastVolume = endVolume;
+      setAudioVolume(audio, endVolume);
+      return;
+    }
+
+    this.clearAmbientChannelFadeTimer(channel);
+    const steps = Math.max(1, Math.ceil(durationMs / AMBIENT_AUDIO_FADE_STEP_MS));
+    let step = 0;
+
+    channel.fadeTimer = setInterval(() => {
+      step += 1;
+      const progress = Math.min(1, step / steps);
+      const nextVolume = clampVolume(startVolume + (endVolume - startVolume) * progress);
+      audio.__ambientLastVolume = nextVolume;
+      setAudioVolume(audio, nextVolume);
+
+      if (progress < 1) return;
+      this.clearAmbientChannelFadeTimer(channel);
+      audio.__ambientLastVolume = endVolume;
+      setAudioVolume(audio, endVolume);
+    }, AMBIENT_AUDIO_FADE_STEP_MS);
+  },
+
+  fadeOutAmbientChannel(channelKey) {
+    const channel = this.ambientAudioChannels && this.ambientAudioChannels[channelKey];
+    if (!channel) return;
+    this.clearAmbientChannelNextTimer(channel);
+    this.clearAmbientChannelFadeTimer(channel);
+
+    const players = (this.ambientAudioPlayers || []).filter((audio) => audio.__ambientChannelKey === channelKey);
+    if (!players.length) {
+      delete this.ambientAudioChannels[channelKey];
+      return;
+    }
+
+    const startVolumes = players.map((audio) => (
+      audio.__ambientLastVolume == null ? audio.__ambientTargetVolume || 0 : audio.__ambientLastVolume
+    ));
+    const steps = Math.max(1, Math.ceil(AMBIENT_AUDIO_STOP_FADE_MS / AMBIENT_AUDIO_FADE_STEP_MS));
+    let step = 0;
+
+    channel.fadeTimer = setInterval(() => {
+      step += 1;
+      const progress = Math.min(1, step / steps);
+      players.forEach((audio, index) => {
+        const nextVolume = clampVolume(startVolumes[index] * (1 - progress));
+        audio.__ambientLastVolume = nextVolume;
+        setAudioVolume(audio, nextVolume);
+      });
+
+      if (progress < 1) return;
+      this.clearAmbientChannelFadeTimer(channel);
+      players.forEach((audio) => this.destroyAmbientAudio(audio));
+      delete this.ambientAudioChannels[channelKey];
+    }, AMBIENT_AUDIO_FADE_STEP_MS);
+  },
+
+  destroyAmbientChannelInactivePlayers(channelKey) {
+    const channel = this.ambientAudioChannels && this.ambientAudioChannels[channelKey];
+    if (!channel) return;
+    (this.ambientAudioPlayers || [])
+      .filter((audio) => audio.__ambientChannelKey === channelKey && audio !== channel.current)
+      .forEach((audio) => this.destroyAmbientAudio(audio));
+  },
+
+  fadeOutAmbientAudio() {
+    this.clearAmbientAudioNextTimer();
+    this.clearAmbientAudioFadeTimer();
+    const players = (this.ambientAudioPlayers || []).slice();
+    if (!players.length) {
+      this.ambientAudioCurrent = null;
+      this.ambientAudioChannels = {};
+      this.ambientAudioTrackId = '';
+      return;
+    }
+    const startVolumes = players.map((audio) => (
+      audio.__ambientLastVolume == null ? audio.__ambientTargetVolume || 0 : audio.__ambientLastVolume
+    ));
+    const steps = Math.max(1, Math.ceil(AMBIENT_AUDIO_STOP_FADE_MS / AMBIENT_AUDIO_FADE_STEP_MS));
+    let step = 0;
+
+    this.ambientAudioFadeTimer = setInterval(() => {
+      step += 1;
+      const progress = Math.min(1, step / steps);
+      players.forEach((audio, index) => {
+        const nextVolume = clampVolume(startVolumes[index] * (1 - progress));
+        audio.__ambientLastVolume = nextVolume;
+        setAudioVolume(audio, nextVolume);
+      });
+
+      if (progress < 1) return;
+      this.clearAmbientAudioFadeTimer();
+      players.forEach((audio) => this.destroyAmbientAudio(audio));
+      this.ambientAudioCurrent = null;
+      this.ambientAudioChannels = {};
+      this.ambientAudioTrackId = '';
+    }, AMBIENT_AUDIO_FADE_STEP_MS);
+  },
+
+  stopAmbientAudio() {
+    this.clearAmbientAudioTimers();
+    const players = this.ambientAudioPlayers || [];
+    players.forEach((audio) => this.destroyAmbientAudio(audio));
+    this.ambientAudioPlayers = [];
+    this.ambientAudioChannels = {};
+    this.ambientAudioCurrent = null;
+    this.ambientAudioTrackId = '';
+  },
+
+  clearAmbientAudioTimers() {
+    this.clearAmbientAudioNextTimer();
+    this.clearAmbientAudioFadeTimer();
+  },
+
+  clearAmbientAudioNextTimer() {
+    Object.keys(this.ambientAudioChannels || {}).forEach((key) => {
+      this.clearAmbientChannelNextTimer(this.ambientAudioChannels[key]);
+    });
+  },
+
+  clearAmbientAudioFadeTimer() {
+    if (this.ambientAudioFadeTimer) {
+      clearInterval(this.ambientAudioFadeTimer);
+      this.ambientAudioFadeTimer = null;
+    }
+    Object.keys(this.ambientAudioChannels || {}).forEach((key) => {
+      this.clearAmbientChannelFadeTimer(this.ambientAudioChannels[key]);
+    });
+  },
+
+  clearAmbientChannelNextTimer(channel) {
+    if (channel && channel.nextTimer) {
+      clearTimeout(channel.nextTimer);
+      channel.nextTimer = null;
+    }
+  },
+
+  clearAmbientChannelFadeTimer(channel) {
+    if (channel && channel.fadeTimer) {
+      clearInterval(channel.fadeTimer);
+      channel.fadeTimer = null;
+    }
+  },
+
+  destroyAmbientAudio(audio) {
+    if (!audio) return;
+    try {
+      audio.stop();
+      audio.destroy();
+    } catch (error) {
+      console.warn('Ambient audio cleanup failed:', error);
+    }
+    this.ambientAudioPlayers = (this.ambientAudioPlayers || []).filter((item) => item !== audio);
   },
 
   enterZen() {

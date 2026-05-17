@@ -123,6 +123,13 @@
       >自定义练习</view>
     </view>
     <view class="zen-hint" wx:if="{{zenHintText}}">{{zenHintText}}</view>
+    <view class="zen-audio-action">
+      <view
+        class="icon-button audio-button {{ambientSoundOn ? 'audio-button-active' : ''}} {{ambientTrackAvailable ? '' : 'audio-button-empty'}}"
+        bindtap="toggleAmbientSound"
+        aria-label="{{ambientSoundOn ? '关闭声音' : '打开声音'}}"
+      >♪</view>
+    </view>
     <view class="zen-exit" bindtap="exitZen">‹</view>
   </view>
 
@@ -133,6 +140,11 @@
   <view class="bottom-actions" wx:if="{{!zenActive && !videoOnlyActive}}">
     <view class="icon-button quote-button" bindtap="nextQuote" aria-label="切换名言">“</view>
     <view class="icon-button dots-button" bindtap="openSettings">···</view>
+    <view
+      class="icon-button audio-button {{ambientSoundOn ? 'audio-button-active' : ''}} {{ambientTrackAvailable ? '' : 'audio-button-empty'}}"
+      bindtap="toggleAmbientSound"
+      aria-label="{{ambientSoundOn ? '关闭声音' : '打开声音'}}"
+    >♪</view>
   </view>
 
   <view class="popover-mask" wx:if="{{weatherVisible && !videoOnlyActive}}" bindtap="closeWeather"></view>

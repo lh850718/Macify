@@ -1,0 +1,52 @@
+<view class="license-page">
+  <view class="header">
+    <text class="title">© 呼吸Zen</text>
+  </view>
+
+  <view class="section summary-section">
+    <view class="body-copy">
+      <text>呼吸Zen 基于 </text>
+      <text class="quiet-inline" bindtap="toggleOpenSource">Macify</text>
+      <text> 改造；背景视频按 </text>
+      <text class="quiet-inline" bindtap="toggleSources">公开素材</text>
+      <text> 平台许可用于应用内背景体验。</text>
+    </view>
+    <text class="quiet-note">素材版权归原作者或相应权利人所有；呼吸Zen 不声明拥有这些素材版权，也不提供素材下载、转售或独立素材库分发。</text>
+
+    <view class="detail-panel" wx:if="{{isOpenSourceExpanded}}">
+      <text class="detail-title">{{openSourceNotice.name}}</text>
+      <text class="detail-line">{{openSourceNotice.license}} · {{openSourceNotice.copyright}}</text>
+      <text class="detail-line">原作者：{{openSourceNotice.authors}}</text>
+      <text class="detail-note">{{openSourceNotice.note}}</text>
+    </view>
+
+    <view class="detail-panel source-panel" wx:if="{{isSourcesExpanded}}">
+      <view class="platform-entry" wx:for="{{platformSummaries}}" wx:key="name">
+        <view class="source-row" data-name="{{item.name}}" bindtap="togglePlatform">
+          <text class="source-name">{{item.name}}</text>
+          <text class="source-count">{{item.videoCount}} 条</text>
+        </view>
+
+        <view class="platform-detail" wx:if="{{item.expanded}}">
+          <text class="detail-line">{{item.license}}</text>
+          <text class="detail-note">{{item.note}}</text>
+          <view class="video-list">
+            <view class="video-entry" wx:for="{{item.videos}}" wx:for-item="video" wx:key="id">
+              <view class="video-row" data-platform="{{item.name}}" data-id="{{video.id}}" bindtap="toggleVideo">
+                <text class="item-title">{{video.title}}</text>
+              </view>
+
+              <view class="video-detail" wx:if="{{video.expanded}}">
+                <text class="detail-line" wx:if="{{video.location}}">地点：{{video.location}}</text>
+                <text class="detail-line">来源：{{video.sourceName}} / {{video.attribution}}</text>
+                <text class="detail-line">许可证：{{video.license}}</text>
+                <text class="detail-line" wx:if="{{video.sourceResolution || video.duration}}">规格：{{video.sourceResolution}} {{video.duration}}</text>
+                <text class="detail-note" wx:if="{{video.licenseNotes}}">{{video.licenseNotes}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

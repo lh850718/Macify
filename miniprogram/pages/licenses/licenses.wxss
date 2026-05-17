@@ -1,0 +1,158 @@
+.license-page {
+  min-height: 100vh;
+  padding: calc(env(safe-area-inset-top) + 40rpx) 28rpx calc(env(safe-area-inset-bottom) + 48rpx);
+  box-sizing: border-box;
+  background: #f4f6f8;
+  color: #18202a;
+}
+
+.header {
+  margin-bottom: 32rpx;
+}
+
+.title {
+  display: block;
+  font-size: 44rpx;
+  font-weight: 750;
+  line-height: 1.1;
+}
+
+.subtitle {
+  display: block;
+  margin-top: 8rpx;
+  color: #687382;
+  font-size: 24rpx;
+}
+
+.section {
+  margin-bottom: 24rpx;
+  padding: 24rpx;
+  background: #fff;
+  border: 1rpx solid #e6eaf0;
+  border-radius: 16rpx;
+}
+
+.summary-section {
+  padding-bottom: 22rpx;
+}
+
+.body-copy {
+  display: block;
+  color: #344154;
+  font-size: 26rpx;
+  line-height: 1.62;
+}
+
+.quiet-inline {
+  color: #26313f;
+  font-weight: 560;
+}
+
+.quiet-note {
+  display: block;
+  margin-top: 14rpx;
+  color: #8b95a3;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.detail-panel {
+  margin-top: 20rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid #eef1f5;
+}
+
+.detail-title {
+  display: block;
+  color: #26313f;
+  font-size: 28rpx;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.detail-line {
+  display: block;
+  margin-top: 8rpx;
+  color: #5f6b79;
+  font-size: 23rpx;
+  line-height: 1.42;
+}
+
+.detail-note {
+  display: block;
+  margin-top: 8rpx;
+  color: #8b95a3;
+  font-size: 22rpx;
+  line-height: 1.45;
+}
+
+.source-panel {
+  padding-top: 8rpx;
+}
+
+.source-row {
+  min-height: 66rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.source-name {
+  color: #26313f;
+  font-size: 27rpx;
+  font-weight: 560;
+  line-height: 1.35;
+}
+
+.source-count {
+  color: #9aa4b2;
+  font-size: 22rpx;
+  line-height: 1.35;
+}
+
+.platform-entry {
+  border-top: 1rpx solid #eef1f5;
+}
+
+.platform-entry:first-of-type {
+  border-top: none;
+}
+
+.platform-detail {
+  padding-bottom: 18rpx;
+}
+
+.video-list {
+  margin-top: 16rpx;
+  border-top: 1rpx solid #eef1f5;
+}
+
+.video-entry {
+  border-bottom: 1rpx solid #f1f3f6;
+}
+
+.video-entry:last-of-type {
+  border-bottom: none;
+}
+
+.video-row {
+  min-height: 64rpx;
+  display: flex;
+  align-items: center;
+}
+
+.item-title {
+  color: #344154;
+  font-size: 25rpx;
+  font-weight: 520;
+  line-height: 1.4;
+}
+
+.video-detail {
+  padding-bottom: 18rpx;
+}
+
+.video-detail .detail-line:first-child {
+  margin-top: 0;
+}

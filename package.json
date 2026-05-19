@@ -14,6 +14,7 @@
     "build:videos": "node scripts/build-videos.mjs",
     "mini:lite": "node scripts/miniprogram/prepare-lite-videos.mjs",
     "mini:premium:validate": "node scripts/miniprogram/validate-premium-aerial-videos.mjs",
+    "mini:ambient:validate": "node scripts/miniprogram/validate-ambient-audio.mjs",
     "mini:cos": "node scripts/miniprogram/upload-cos-videos.mjs",
     "download:aerials": "cd scripts && python3 -m aerial_downloader.main"
   },

@@ -4,6 +4,7 @@ const AMBIENT_AUDIO_MODES = Object.freeze({
   VIDEO: 'video',
   CUSTOM: 'custom',
 });
+const VIDEO_AMBIENT_MIXES = require('./video-audio-mixes.js');
 
 const AMBIENT_TRACKS = Object.freeze({
   ocean: {
@@ -129,49 +130,13 @@ const CUSTOM_AMBIENT_LABELS = Object.freeze({
   underwater: '水下',
 });
 
-const AMBIENT_VIDEO_OVERRIDES = Object.freeze({
-  'mixkit-sunset-reveal-over-scenic-lagoon-101208': 'sky',
-  'mixkit-aerial-view-of-a-city-during-the-night-4308': 'sky',
-  'mixkit-city-of-tokyo-at-night-4383': 'sky',
-  'pixabay-347325': 'sky',
-  'pixabay-323513': 'sky',
-  'pixabay-328740': 'sky',
-  'pixabay-181376': 'birds',
-  'pixabay-325502': 'sky',
-  'pixabay-305657': 'forestWindBirds',
-  'pixabay-108366': 'underwater',
-  'pixabay-287510': 'river',
-  'pixabay-307864': 'sky',
-  'pixabay-276047': 'sky',
-  'pixabay-283431': 'sky',
-  'pixabay-266987': [
-    { trackId: 'sky', volume: 0.52 },
-    { trackId: 'birds', volume: 0.16 },
-  ],
-  'pixabay-240841': [
-    { trackId: 'sky', volume: 1 },
-    { trackId: 'birds', volume: 0.08 },
-  ],
-  'pixabay-265501': 'forestWindBirds',
-  'pixabay-232561': 'tractor',
-  'pixabay-191159': 'wind',
-  'pixabay-268528': null,
-  'pixabay-260895': 'sky',
-  'pixabay-260397': 'wind',
-  'pixabay-253436': 'sky',
-  'pixabay-271161': 'waterfall',
-  'pixabay-204006': 'sky',
-  'pixabay-221180': 'sky',
-  'pixabay-228847': 'waterfall',
-  'pixabay-28707': 'waterfall',
-  'pixabay-175876': [
-    { trackId: 'sky', volume: 0.24 },
-    { trackId: 'wind', volume: 0.12 },
-  ],
-  'pixabay-111179': 'sky',
-  'pixabay-140111': 'oceanGulls',
-  'pixabay-159703': 'river',
-});
+const AMBIENT_VIDEO_OVERRIDES = Object.freeze(
+  VIDEO_AMBIENT_MIXES.reduce((result, item) => {
+    if (!item || !item.videoId) return result;
+    result[item.videoId] = item.mix == null ? null : item.mix;
+    return result;
+  }, {}),
+);
 
 const AMBIENT_RULES = Object.freeze([
   {
@@ -407,9 +372,13 @@ function ambientMixFromCustomSettings(customMix, options = {}) {
 
 module.exports = {
   AMBIENT_AUDIO_MODES,
+  AMBIENT_RULES,
   DEFAULT_AMBIENT_AUDIO_BASE,
   AMBIENT_TRACKS,
+  CUSTOM_AMBIENT_LABELS,
+  CUSTOM_AMBIENT_TRACK_IDS,
   MAX_CUSTOM_AMBIENT_TRACKS,
+  VIDEO_AMBIENT_MIXES,
   ambientMixFromCustomSettings,
   ambientMixFromSpec,
   ambientTrackForVideo,

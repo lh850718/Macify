@@ -1,0 +1,173 @@
+const VIDEO_AMBIENT_MIXES = Object.freeze([
+  {
+    videoId: 'mixkit-sunset-reveal-over-scenic-lagoon-101208',
+    mix: [{ trackId: 'sky' }],
+    notes: '落日泻湖：以开阔天空氛围兜底，避免硬配海浪。',
+  },
+  {
+    videoId: 'mixkit-aerial-view-of-a-city-during-the-night-4308',
+    mix: [{ trackId: 'sky' }],
+    notes: '东京暮色：城市夜景暂用高空氛围，保持安静。',
+  },
+  {
+    videoId: 'mixkit-city-of-tokyo-at-night-4383',
+    mix: [{ trackId: 'sky' }],
+    notes: '东京夜城：城市夜景暂用高空氛围，避免街噪破坏屏保感。',
+  },
+  {
+    videoId: 'pixabay-347325',
+    mix: [{ trackId: 'sky' }],
+    notes: '云峰落日：山云主体，使用高空氛围。',
+  },
+  {
+    videoId: 'pixabay-323513',
+    mix: [{ trackId: 'sky' }],
+    notes: '摩纳哥港：港湾画面不硬配海浪，使用高空氛围。',
+  },
+  {
+    videoId: 'pixabay-328740',
+    mix: [{ trackId: 'sky' }],
+    notes: '晨雾阿尔卑斯：山体与云雾主体，使用高空氛围。',
+  },
+  {
+    videoId: 'pixabay-181376',
+    mix: [{ trackId: 'birds' }],
+    notes: '木舟渔人：轻鸟鸣比水声更克制。',
+  },
+  {
+    videoId: 'pixabay-325502',
+    mix: [{ trackId: 'sky' }],
+    notes: '雪原冷林：冷静开阔氛围，使用高空音。',
+  },
+  {
+    videoId: 'pixabay-305657',
+    mix: [{ trackId: 'forestWindBirds' }],
+    notes: '阿尔卑斯山径：用户指定山林风鸟。',
+  },
+  {
+    videoId: 'pixabay-108366',
+    mix: [{ trackId: 'underwater' }],
+    notes: '淡水鱼群：用户指定水下氛围。',
+  },
+  {
+    videoId: 'pixabay-287510',
+    mix: [{ trackId: 'river' }],
+    notes: '苔径深林：用户指定溪流。',
+  },
+  {
+    videoId: 'pixabay-307864',
+    mix: [{ trackId: 'sky' }],
+    notes: '稻田风机：用户指定高空氛围。',
+  },
+  {
+    videoId: 'pixabay-276047',
+    mix: [{ trackId: 'sky' }],
+    notes: '西峡鸟影：用户指定高空氛围。',
+  },
+  {
+    videoId: 'pixabay-283431',
+    mix: [{ trackId: 'sky' }],
+    notes: '山田星田：用户指定高空氛围。',
+  },
+  {
+    videoId: 'pixabay-266987',
+    mix: [
+      { trackId: 'sky', volume: 0.52 },
+      { trackId: 'birds', volume: 0.16 },
+    ],
+    notes: '春林直道：sky 为主，轻混鸟声。',
+  },
+  {
+    videoId: 'pixabay-240841',
+    mix: [
+      { trackId: 'sky', volume: 1 },
+      { trackId: 'birds', volume: 0.08 },
+    ],
+    notes: '富士晨塔：天空为主，鸟声极轻。',
+  },
+  {
+    videoId: 'pixabay-265501',
+    mix: [{ trackId: 'forestWindBirds' }],
+    notes: '雏鸭草间：用户指定山林风鸟。',
+  },
+  {
+    videoId: 'pixabay-232561',
+    mix: [{ trackId: 'tractor' }],
+    notes: '麦田收割：特殊视频使用收割机音，且不进入自定义候选。',
+  },
+  {
+    videoId: 'pixabay-191159',
+    mix: [{ trackId: 'wind' }],
+    notes: '雪羽海鸥：用户指定风声，避免海浪过强。',
+  },
+  {
+    videoId: 'pixabay-268528',
+    mix: null,
+    notes: '樱光春枝：用户指定无音频。',
+  },
+  {
+    videoId: 'pixabay-260895',
+    mix: [{ trackId: 'sky' }],
+    notes: '里斯本圣像：用户指定高空氛围。',
+  },
+  {
+    videoId: 'pixabay-260397',
+    mix: [{ trackId: 'wind' }],
+    notes: '瑞士雾海：用户指定风声。',
+  },
+  {
+    videoId: 'pixabay-253436',
+    mix: [{ trackId: 'sky' }],
+    notes: '冰岛火丘：火山地貌不硬配火声，使用高空氛围。',
+  },
+  {
+    videoId: 'pixabay-271161',
+    mix: [{ trackId: 'waterfall' }],
+    notes: '青苔溪石：用户指定瀑布。',
+  },
+  {
+    videoId: 'pixabay-204006',
+    mix: [{ trackId: 'sky' }],
+    notes: '金云暮天：用户指定高空氛围。',
+  },
+  {
+    videoId: 'pixabay-221180',
+    mix: [{ trackId: 'sky' }],
+    notes: '云隙光束：用户指定高空氛围。',
+  },
+  {
+    videoId: 'pixabay-228847',
+    mix: [{ trackId: 'waterfall' }],
+    notes: '山涧白瀑：用户指定瀑布。',
+  },
+  {
+    videoId: 'pixabay-28707',
+    mix: [{ trackId: 'waterfall' }],
+    notes: '尼亚加拉白潮：用户指定瀑布。',
+  },
+  {
+    videoId: 'pixabay-175876',
+    mix: [
+      { trackId: 'sky', volume: 0.24 },
+      { trackId: 'wind', volume: 0.12 },
+    ],
+    notes: '古堡帆影：低音量高空 + 风声轻混。',
+  },
+  {
+    videoId: 'pixabay-111179',
+    mix: [{ trackId: 'sky' }],
+    notes: '晴空云影：用户指定高空氛围。',
+  },
+  {
+    videoId: 'pixabay-140111',
+    mix: [{ trackId: 'oceanGulls' }],
+    notes: '暮海群鸥：用户指定海鸥海浪。',
+  },
+  {
+    videoId: 'pixabay-159703',
+    mix: [{ trackId: 'river' }],
+    notes: '雪河气泡：用户指定溪流。',
+  },
+]);
+
+module.exports = VIDEO_AMBIENT_MIXES;

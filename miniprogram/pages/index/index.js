@@ -339,6 +339,9 @@ Page({
   },
 
   onShow() {
+    if (this.consumeAmbientSoundResetRequest()) {
+      this.resetAmbientSound();
+    }
     this.loadSettingsAndContent();
   },
 
@@ -355,7 +358,7 @@ Page({
   },
 
   onHide() {
-    this.resetAmbientSound();
+    this.suspendAmbientSound();
     this.stopZenCues();
   },
 
@@ -419,12 +422,16 @@ Page({
   handleHorizontalSwipe(deltaX) {
     this.markSwipeHandled();
     if (this.data.videoOnlyActive) return;
-    if (deltaX > 0) {
-      if (this.data.zenActive) this.exitZen();
-      else this.enterZen();
+    if (!this.data.zenActive) {
+      if (deltaX > 0) this.enterZen();
+      else this.openSettings('home');
       return;
     }
-    this.openSettings(this.data.zenActive ? 'zen' : 'home');
+    if (deltaX > 0) {
+      this.startCustomBreath();
+    } else {
+      this.exitZen();
+    }
   },
 
   isScreenTapEvent(event) {
@@ -1128,6 +1135,19 @@ Page({
     });
   },
 
+  consumeAmbientSoundResetRequest() {
+    if (typeof getApp !== 'function') return false;
+    const app = getApp();
+    const globalData = app && app.globalData;
+    if (!globalData || !globalData.resetAmbientSoundOnPageShow) return false;
+    globalData.resetAmbientSoundOnPageShow = false;
+    return true;
+  },
+
+  suspendAmbientSound() {
+    this.stopAmbientAudio();
+  },
+
   resetAmbientSound() {
     this.stopAmbientAudio();
     if (this.data.ambientSoundOn) {
@@ -1140,7 +1160,6 @@ Page({
     const track = this.currentAmbientTrack();
     if (!track) {
       this.setData({
-        ambientSoundOn: false,
         ambientTrackAvailable: false,
         ambientTrackLabel: '',
       });

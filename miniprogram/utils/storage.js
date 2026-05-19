@@ -164,6 +164,15 @@ function resetZenCuesForEntry() {
   });
 }
 
+function resetZenSoundForForeground() {
+  const settings = getSettings();
+  if (!settings.zenSound) return settings;
+  return saveSettings({
+    ...settings,
+    zenSound: false,
+  });
+}
+
 function getCache(key) {
   return readJson(CACHE_PREFIX + key, null);
 }
@@ -235,6 +244,7 @@ module.exports = {
   saveSettings,
   setSetting,
   resetZenCuesForEntry,
+  resetZenSoundForForeground,
   getCache,
   setCache,
   getFavoriteVideoKeys,

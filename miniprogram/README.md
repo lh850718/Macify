@@ -72,10 +72,11 @@ https://video.huxizen.com
 https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-premium/videos/<source-video-id>.mp4
 ```
 
-视频素材使用独立清单 `miniprogram/data/premium-free-aerial-videos.js` 和独立 COS 前缀 `macify-premium/`。每条新增视频都要先补齐来源、授权、分类、地点和中文说明，并通过校验：
+视频、环境音和视频/音频混合关系的单一来源在仓库根目录 `content/`。`miniprogram/data/premium-free-aerial-videos.js` 是生成产物，不要手改。每条新增视频都要先在 `content/videos.json` 补齐来源、授权、分类、地点和中文说明，并通过校验：
 
 ```bash
-npm run mini:premium:validate
+npm run content:validate
+npm run content:build
 ```
 
 先生成 5-10 条小样，不上传：

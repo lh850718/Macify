@@ -55,7 +55,7 @@
     <view class="setting-row stacked-row">
       <view class="row-copy">
         <text class="label">保留呼吸页设置</text>
-        <text class="hint">仅保留颂钵音和触感；切回小程序时仍先静音</text>
+        <text class="hint">仅保留颂钵音和触感；退出后重新进入仍先静音</text>
       </view>
       <switch checked="{{settings.rememberZenCues}}" data-key="rememberZenCues" bindchange="onSwitchChange" color="#47c7a2" />
     </view>

@@ -24,6 +24,17 @@ Replace Chrome's new tab page with macOS's aerial screensaver videos and a small
 
 Building from source or contributing? See [DEVELOPMENT.md](DEVELOPMENT.md).
 
+## Shared content pipeline
+
+Video, ambient audio, and video/audio mix data for the mini program and future Flutter app live in `content/` as the single source of truth. Generated mini program files and Flutter JSON assets are built with:
+
+```bash
+npm run content:validate
+npm run content:build
+```
+
+See [docs/content-pipeline.md](docs/content-pipeline.md) for the full workflow.
+
 ## Choosing a video source
 
 Two options. Each has a built-in step-by-step guide inside Macify's settings page; this section just summarises.

@@ -1,0 +1,128 @@
+{
+  "modes": {
+    "VIDEO": "video",
+    "CUSTOM": "custom"
+  },
+  "maxCustomAmbientTracks": 5,
+  "tracks": {
+    "ocean": {
+      "id": "ocean",
+      "label": "海浪",
+      "file": "ocean-soft-waves.mp3",
+      "durationMs": 180114,
+      "volume": 0.5
+    },
+    "oceanGulls": {
+      "id": "oceanGulls",
+      "label": "海鸥海浪",
+      "file": "gentle-ocean-waves-birdsong-and-gull.mp3",
+      "durationMs": 115152,
+      "volume": 0.66
+    },
+    "underwater": {
+      "id": "underwater",
+      "label": "水下",
+      "file": "underwater-ambience.mp3",
+      "durationMs": 46920,
+      "volume": 0.28
+    },
+    "forest": {
+      "id": "forest",
+      "label": "森林",
+      "file": "forest-ambience.mp3",
+      "durationMs": 212976,
+      "volume": 0.54
+    },
+    "forestWindBirds": {
+      "id": "forestWindBirds",
+      "label": "山林风鸟",
+      "file": "forest-wind-and-birds.mp3",
+      "durationMs": 196104,
+      "volume": 0.54
+    },
+    "river": {
+      "id": "river",
+      "label": "溪流",
+      "file": "river-stream.mp3",
+      "durationMs": 120111,
+      "volume": 0.52
+    },
+    "waterfall": {
+      "id": "waterfall",
+      "label": "瀑布",
+      "file": "waterfall.mp3",
+      "durationMs": 82155,
+      "volume": 0.44
+    },
+    "birds": {
+      "id": "birds",
+      "label": "鸟鸣",
+      "file": "birds.mp3",
+      "durationMs": 180000,
+      "volume": 0.62
+    },
+    "wind": {
+      "id": "wind",
+      "label": "风声",
+      "file": "wind-in-trees.mp3",
+      "durationMs": 147931,
+      "volume": 0.54
+    },
+    "sky": {
+      "id": "sky",
+      "label": "天空",
+      "file": "mountain-sky-ambience.mp3",
+      "durationMs": 48024,
+      "volume": 0.52
+    },
+    "lightRain": {
+      "id": "lightRain",
+      "label": "雨声",
+      "file": "light-rain.mp3",
+      "durationMs": 104359,
+      "volume": 0.34
+    },
+    "fire": {
+      "id": "fire",
+      "label": "炉火",
+      "file": "fire-crackling.mp3",
+      "durationMs": 79536,
+      "volume": 0.3
+    },
+    "tractor": {
+      "id": "tractor",
+      "label": "收割机",
+      "file": "tractor-harvesting.mp3",
+      "durationMs": 249731,
+      "volume": 0.36
+    }
+  },
+  "customTrackIds": [
+    "wind",
+    "waterfall",
+    "sky",
+    "fire",
+    "lightRain",
+    "river",
+    "birds",
+    "forestWindBirds",
+    "forest",
+    "ocean",
+    "oceanGulls",
+    "underwater"
+  ],
+  "customLabels": {
+    "wind": "林中风",
+    "waterfall": "瀑布",
+    "sky": "高空",
+    "fire": "火",
+    "lightRain": "小雨",
+    "river": "溪流",
+    "birds": "鸟叫",
+    "forestWindBirds": "山中鸟叫",
+    "forest": "森林",
+    "ocean": "海浪",
+    "oceanGulls": "海鸥海浪",
+    "underwater": "水下"
+  }
+}

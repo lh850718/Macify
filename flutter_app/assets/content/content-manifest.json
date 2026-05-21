@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "premium-free-aerial-1080p-cos-20260514-99",
+  "defaultVideoLibrary": "premiumFreeAerial",
+  "files": {
+    "config.json": {
+      "bytes": 343,
+      "sha256": "047cb796e56c5454483a5678bfa8d9b98b4da01fa2e63ee6873104f7d7f3941c"
+    },
+    "videos.json": {
+      "bytes": 144959,
+      "sha256": "0a757b02d7f36fd35e20c214d3b8a942c98a1ea51d8c5b2bab26cf6cbc73a231"
+    },
+    "ambient-tracks.json": {
+      "bytes": 2738,
+      "sha256": "022df3afbab6af04ba9d161253527e598d6c89c1bec0b69d45e44dca5d4bdba4"
+    },
+    "ambient-rules.json": {
+      "bytes": 2144,
+      "sha256": "b2f4e070e6308fd4f447f8f2789ee015e73b84d9fb9c7df8b31ef6100bc84a3f"
+    },
+    "video-audio-mixes.json": {
+      "bytes": 5752,
+      "sha256": "dc53144fa68c50b9b8d91e1ad473709438f37fd370e02b87d6426d64331342c4"
+    }
+  }
+}

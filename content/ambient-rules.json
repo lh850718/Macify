@@ -1,0 +1,148 @@
+[
+  {
+    "trackId": "waterfall",
+    "any": [
+      "waterfall",
+      "waterfalls",
+      "niagara falls",
+      "water falls",
+      "falls",
+      "whitewater"
+    ]
+  },
+  {
+    "trackId": "forestWindBirds",
+    "any": [
+      "alps",
+      "swiss alps"
+    ]
+  },
+  {
+    "trackId": "lightRain",
+    "any": [
+      "rain",
+      "water drops",
+      "wet",
+      "drops",
+      "glass",
+      "window"
+    ]
+  },
+  {
+    "trackId": "fire",
+    "any": [
+      "campfire",
+      "fireplace",
+      "flames"
+    ],
+    "none": [
+      "fireworks",
+      "lava",
+      "volcano",
+      "eruption"
+    ]
+  },
+  {
+    "trackId": "underwater",
+    "any": [
+      "underwater",
+      "aquarium",
+      "jellyfish",
+      "fish",
+      "fishes",
+      "clownfish",
+      "clown fish",
+      "catfish",
+      "reef",
+      "reef fish",
+      "sea anemone",
+      "anemone",
+      "turtle",
+      "diving",
+      "scuba",
+      "marine",
+      "marine life",
+      "marine worms",
+      "sea creatures",
+      "pool"
+    ],
+    "none": [
+      "rainforest"
+    ]
+  },
+  {
+    "trackId": "birds",
+    "any": [
+      "bird",
+      "birds",
+      "baby bird",
+      "duck",
+      "gull",
+      "seagulls",
+      "kingfisher",
+      "shrike"
+    ]
+  },
+  {
+    "trackId": "river",
+    "any": [
+      "river",
+      "stream"
+    ]
+  },
+  {
+    "trackId": "forest",
+    "any": [
+      "forest",
+      "woods",
+      "moss",
+      "trees",
+      "stream",
+      "grass",
+      "plants",
+      "plant",
+      "garden",
+      "flowers",
+      "cherry blossoms",
+      "sakura",
+      "plum",
+      "lizard",
+      "dew"
+    ],
+    "none": [
+      "underwater",
+      "aquarium",
+      "fish",
+      "jellyfish"
+    ]
+  },
+  {
+    "trackId": "ocean",
+    "any": [
+      "ocean",
+      "sea",
+      "beach",
+      "coast",
+      "coastline",
+      "lagoon",
+      "shoreline",
+      "waves",
+      "wave",
+      "surf",
+      "seascape",
+      "sand",
+      "harbor",
+      "marina",
+      "sailboats"
+    ],
+    "none": [
+      "underwater",
+      "aquarium",
+      "fish",
+      "jellyfish",
+      "turtle",
+      "sea of fog",
+      "fireworks"
+    ]
+  }
+]

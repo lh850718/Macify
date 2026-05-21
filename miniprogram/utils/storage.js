@@ -3,12 +3,13 @@ const {
   AMBIENT_AUDIO_MODES,
   normalizeCustomAmbientMix,
 } = require('../data/ambient-audio.js');
+const CONTENT_CONFIG = require('../data/content-config.js');
 const CACHE_PREFIX = 'macify.cache.';
 const FAVORITE_VIDEOS_KEY = 'favorite-videos-v1';
-const DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE = 'https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-premium';
-const PREMIUM_FREE_AERIAL_SOURCE_VERSION = 'premium-free-aerial-1080p-cos-20260514-99';
+const DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE = CONTENT_CONFIG.defaultPremiumFreeAerialVideoBase;
+const PREMIUM_FREE_AERIAL_SOURCE_VERSION = CONTENT_CONFIG.contentVersion;
 const SHUFFLE_SCOPE_VERSION = 'default-all-20260510';
-const DEFAULT_VIDEO_LIBRARY = 'premiumFreeAerial';
+const DEFAULT_VIDEO_LIBRARY = CONTENT_CONFIG.defaultVideoLibrary;
 const DEFAULT_BREATH_RHYTHM = Object.freeze({
   inhale: 5,
   holdAfterInhale: 0,

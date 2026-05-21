@@ -1,134 +1,13 @@
-const DEFAULT_AMBIENT_AUDIO_BASE = 'https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-audio';
-const MAX_CUSTOM_AMBIENT_TRACKS = 5;
-const AMBIENT_AUDIO_MODES = Object.freeze({
-  VIDEO: 'video',
-  CUSTOM: 'custom',
-});
 const VIDEO_AMBIENT_MIXES = require('./video-audio-mixes.js');
-
-const AMBIENT_TRACKS = Object.freeze({
-  ocean: {
-    id: 'ocean',
-    label: '海浪',
-    file: 'ocean-soft-waves.mp3',
-    durationMs: 180114,
-    volume: 0.5,
-  },
-  oceanGulls: {
-    id: 'oceanGulls',
-    label: '海鸥海浪',
-    file: 'gentle-ocean-waves-birdsong-and-gull.mp3',
-    durationMs: 115152,
-    volume: 0.66,
-  },
-  underwater: {
-    id: 'underwater',
-    label: '水下',
-    file: 'underwater-ambience.mp3',
-    durationMs: 46920,
-    volume: 0.28,
-  },
-  forest: {
-    id: 'forest',
-    label: '森林',
-    file: 'forest-ambience.mp3',
-    durationMs: 212976,
-    volume: 0.54,
-  },
-  forestWindBirds: {
-    id: 'forestWindBirds',
-    label: '山林风鸟',
-    file: 'forest-wind-and-birds.mp3',
-    durationMs: 196104,
-    volume: 0.54,
-  },
-  river: {
-    id: 'river',
-    label: '溪流',
-    file: 'river-stream.mp3',
-    durationMs: 120111,
-    volume: 0.52,
-  },
-  waterfall: {
-    id: 'waterfall',
-    label: '瀑布',
-    file: 'waterfall.mp3',
-    durationMs: 82155,
-    volume: 0.44,
-  },
-  birds: {
-    id: 'birds',
-    label: '鸟鸣',
-    file: 'birds.mp3',
-    durationMs: 180000,
-    volume: 0.62,
-  },
-  wind: {
-    id: 'wind',
-    label: '风声',
-    file: 'wind-in-trees.mp3',
-    durationMs: 147931,
-    volume: 0.54,
-  },
-  sky: {
-    id: 'sky',
-    label: '天空',
-    file: 'mountain-sky-ambience.mp3',
-    durationMs: 48024,
-    volume: 0.52,
-  },
-  lightRain: {
-    id: 'lightRain',
-    label: '雨声',
-    file: 'light-rain.mp3',
-    durationMs: 104359,
-    volume: 0.34,
-  },
-  fire: {
-    id: 'fire',
-    label: '炉火',
-    file: 'fire-crackling.mp3',
-    durationMs: 79536,
-    volume: 0.3,
-  },
-  tractor: {
-    id: 'tractor',
-    label: '收割机',
-    file: 'tractor-harvesting.mp3',
-    durationMs: 249731,
-    volume: 0.36,
-  },
-});
-
-const CUSTOM_AMBIENT_TRACK_IDS = Object.freeze([
-  'wind',
-  'waterfall',
-  'sky',
-  'fire',
-  'lightRain',
-  'river',
-  'birds',
-  'forestWindBirds',
-  'forest',
-  'ocean',
-  'oceanGulls',
-  'underwater',
-]);
-
-const CUSTOM_AMBIENT_LABELS = Object.freeze({
-  wind: '林中风',
-  waterfall: '瀑布',
-  sky: '高空',
-  fire: '火',
-  lightRain: '小雨',
-  river: '溪流',
-  birds: '鸟叫',
-  forestWindBirds: '山中鸟叫',
-  forest: '森林',
-  ocean: '海浪',
-  oceanGulls: '海鸥海浪',
-  underwater: '水下',
-});
+const {
+  AMBIENT_AUDIO_MODES,
+  AMBIENT_RULES,
+  AMBIENT_TRACKS,
+  CUSTOM_AMBIENT_LABELS,
+  CUSTOM_AMBIENT_TRACK_IDS,
+  DEFAULT_AMBIENT_AUDIO_BASE,
+  MAX_CUSTOM_AMBIENT_TRACKS,
+} = require('./ambient-content.js');
 
 const AMBIENT_VIDEO_OVERRIDES = Object.freeze(
   VIDEO_AMBIENT_MIXES.reduce((result, item) => {
@@ -137,102 +16,6 @@ const AMBIENT_VIDEO_OVERRIDES = Object.freeze(
     return result;
   }, {}),
 );
-
-const AMBIENT_RULES = Object.freeze([
-  {
-    trackId: 'waterfall',
-    any: ['waterfall', 'waterfalls', 'niagara falls', 'water falls', 'falls', 'whitewater'],
-  },
-  {
-    trackId: 'forestWindBirds',
-    any: ['alps', 'swiss alps'],
-  },
-  {
-    trackId: 'lightRain',
-    any: ['rain', 'water drops', 'wet', 'drops', 'glass', 'window'],
-  },
-  {
-    trackId: 'fire',
-    any: ['campfire', 'fireplace', 'flames'],
-    none: ['fireworks', 'lava', 'volcano', 'eruption'],
-  },
-  {
-    trackId: 'underwater',
-    any: [
-      'underwater',
-      'aquarium',
-      'jellyfish',
-      'fish',
-      'fishes',
-      'clownfish',
-      'clown fish',
-      'catfish',
-      'reef',
-      'reef fish',
-      'sea anemone',
-      'anemone',
-      'turtle',
-      'diving',
-      'scuba',
-      'marine',
-      'marine life',
-      'marine worms',
-      'sea creatures',
-      'pool',
-    ],
-    none: ['rainforest'],
-  },
-  {
-    trackId: 'birds',
-    any: ['bird', 'birds', 'baby bird', 'duck', 'gull', 'seagulls', 'kingfisher', 'shrike'],
-  },
-  {
-    trackId: 'river',
-    any: ['river', 'stream'],
-  },
-  {
-    trackId: 'forest',
-    any: [
-      'forest',
-      'woods',
-      'moss',
-      'trees',
-      'stream',
-      'grass',
-      'plants',
-      'plant',
-      'garden',
-      'flowers',
-      'cherry blossoms',
-      'sakura',
-      'plum',
-      'lizard',
-      'dew',
-    ],
-    none: ['underwater', 'aquarium', 'fish', 'jellyfish'],
-  },
-  {
-    trackId: 'ocean',
-    any: [
-      'ocean',
-      'sea',
-      'beach',
-      'coast',
-      'coastline',
-      'lagoon',
-      'shoreline',
-      'waves',
-      'wave',
-      'surf',
-      'seascape',
-      'sand',
-      'harbor',
-      'marina',
-      'sailboats',
-    ],
-    none: ['underwater', 'aquarium', 'fish', 'jellyfish', 'turtle', 'sea of fog', 'fireworks'],
-  },
-]);
 
 function normalizeBase(base) {
   return String(base || '').trim().replace(/\/$/, '');
@@ -255,7 +38,7 @@ function collectTerms(video) {
 }
 
 function hasAnyTerm(terms, matches) {
-  return matches.some((match) => terms.includes(match));
+  return matches.some((match) => terms.includes(String(match).trim().toLowerCase()));
 }
 
 function matchesRule(terms, rule) {

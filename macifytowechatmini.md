@@ -46,7 +46,9 @@ macify-public/
 videoLibrary: 'premiumFreeAerial'
 内部素材库名: premiumFreeAerial
 用户侧文案: 不展示素材库来源，只展示分类
-清单: miniprogram/data/premium-free-aerial-videos.js
+单一内容源: content/videos.json
+小程序生成清单: miniprogram/data/premium-free-aerial-videos.js
+Flutter 生成清单: flutter_app/assets/content/videos.json
 COS base: https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-premium
 COS path: macify-premium/videos/<source-video-id>.mp4
 ```
@@ -136,7 +138,9 @@ description
 
 ### 每条清单记录必须完整
 
-新增到 `premium-free-aerial-videos.js` 的每条视频至少要包含：
+`content/` 是视频、环境音、视频/音频混合方案的单一来源。`miniprogram/data/*.js`、`flutter_app/assets/content/*.json` 和 `content-dist/*.json` 都由 `npm run content:build` 生成，不要手改生成产物。
+
+新增到 `content/videos.json` 的每条视频至少要包含：
 
 ```text
 id
@@ -165,8 +169,53 @@ qualityTier
 新增或修改后必须运行：
 
 ```bash
-npm run mini:premium:validate
+npm run content:validate
+npm run content:build
 ```
+
+### 共享内容源与 Flutter 接入路线
+
+当前内容管线状态：
+
+- `content/` 已成为视频、环境音、视频/音频混合方案的单一来源。
+- 小程序已接入这条管线：运行 `npm run content:build` 会生成 `miniprogram/data/content-config.js`、`miniprogram/data/ambient-content.js`、`miniprogram/data/premium-free-aerial-videos.js` 和 `miniprogram/data/video-audio-mixes.js`。
+- Flutter 侧目前生成的是通用 JSON assets：`flutter_app/assets/content/*.json`。这只是 Flutter 内容资产准备，不代表真实 Flutter App 代码已经完成，因为当前仓库还没有正式 Flutter 工程。
+- Flutter 主项目文档位于 `flutter_app/PROJECT.md`；后续 Flutter 任何功能、资源、平台能力、依赖、权限或同步策略变化，都必须同步更新该文档。
+- `content-dist/` 是未来上传 COS/CDN 的远程内容包预留目录，用于后续做 `content-manifest.json` 远程更新。
+
+后续新增视频、音频或调整视频/音频匹配时，只改：
+
+```text
+content/videos.json
+content/ambient-tracks.json
+content/video-audio-mixes.json
+content/ambient-rules.json
+content/config.json
+```
+
+不要手改：
+
+```text
+miniprogram/data/premium-free-aerial-videos.js
+miniprogram/data/ambient-content.js
+miniprogram/data/video-audio-mixes.js
+flutter_app/assets/content/*.json
+content-dist/*.json
+```
+
+开发真实 Flutter App 时，下一步按这个顺序走：
+
+1. 确定真实 Flutter 工程目录。如果不是仓库里的 `flutter_app/`，构建时用 `FLUTTER_CONTENT_DIR=/path/to/flutter/assets/content npm run content:build` 指向真实工程。
+2. 在 Flutter 的 `pubspec.yaml` 加入 `assets/content/`。
+3. 写 Flutter `ContentRepository`，先读 `assets/content/content-manifest.json`，再读 `config.json`、`videos.json`、`ambient-tracks.json`、`ambient-rules.json`、`video-audio-mixes.json`。
+4. 写 Flutter 版音频匹配 resolver：显式 `video-audio-mixes` 优先；没有显式配置时按 `ambient-rules` 匹配；都没有则当前视频无环境音。
+5. 先做本地内置 assets 版本，保证 App 离线可启动；再做远程 manifest：启动时先用本地内容，后台检查远程 `contentVersion`，版本更高时下载 JSON 并缓存。这样以后多数内容更新不需要重新发 Flutter App 或小程序。
+6. Flutter 播放器和音频层应消费同一份 JSON，不要在 Dart 里重新维护一套视频清单、音频列表或匹配规则。
+
+是否需要重新编译：
+
+- 小程序：当前仍需要。改完 `content/` 后运行 `npm run content:build`，再用微信开发者工具重新编译/上传。
+- Flutter：真实 App 接入 assets 后也需要重新 build；等远程 manifest 做完后，纯内容新增和匹配调整可以通过上传 `content-dist/` 更新，未必需要重新发 App。
 
 ### 素材与授权页策略
 
@@ -175,7 +224,7 @@ npm run mini:premium:validate
 - `description` 只写地点、人文、自然知识或公版诗句意象，不写素材来源、许可证、上传状态、候选状态或技术信息。
 - 版权声明不要塞进单条视频介绍文案。设置页左上标题直接显示 `© 呼吸Zen`，点击标题进入 `miniprogram/pages/licenses/licenses.*`；不要额外放右上角入口或“关于”区域。
 - 授权记录页只保留首屏概要区域，不单独展示“记录”或“视频素材”区域。首屏不直接展示 `Mixkit`、`Pixabay` 等来源平台名。点 `Macify` 展示开源声明；点“公开素材”四个字才在同一区域内展示来源平台；点平台展示该平台视频名列表；点视频名展示作者/署名、许可证和备注。
-- 来源平台详情由 `premium-free-aerial-videos.js` 中 `qualityTier: 'published'` 的条目按 `sourceName` 自动生成；`SOURCE_PLATFORMS` 只保存平台许可说明文案，未来新增 `sourceName` 时同步补齐对应说明。
+- 来源平台详情由生成后的 `premium-free-aerial-videos.js` 中 `qualityTier: 'published'` 的条目按 `sourceName` 自动生成；`SOURCE_PLATFORMS` 只保存平台许可说明文案，未来新增 `sourceName` 时同步补齐对应说明。
 - 未来每次新增公开视频、改来源平台、改许可证字段或新增 `sourceName`，都必须同步检查并更新授权记录页；如果只是新增同平台视频且清单字段完整，页面清单会自动带出，但仍要确认平台声明是否准确。
 - 当前 Mixkit 与 Pixabay 条目都记录为无需强制署名，但仍应在授权记录页的单条详情里保留署名状态；来源链接保留在数据字段和 `OPEN_SOURCE_NOTICES.txt`，不在页面上直接展示。
 - 如果未来做收费 App，不能只靠声明版权解决授权风险。必须确认每个来源的许可允许商业 App 内使用，且 App 不是把素材作为独立视频、壁纸、素材库或下载资源转售。单纯裁切、转码、调色通常不足以把素材变成新的创作。
@@ -214,13 +263,16 @@ npm run mini:premium:validate
 
 ### 首页环境音与自定义混音策略
 
-- 首页背景视频默认无声音；每次退出、切后台或重新进入小程序，都必须恢复为无声音。这里的退出 / 切后台指小程序生命周期事件，不包括首页、呼吸页、设置页之间的页面内导航。
+- 首页背景视频初次进入默认无声音；锁屏、按 Home、切到微信外面、真正退出或重新进入小程序，都必须恢复为无声音，避免用户离开后手机继续发声。
 - 首页右下角 `♪` 是环境音开关；呼吸页也保留同一个 `♪`。这两个入口的 UI 不要再增加模式选择，用户在设置页选好后，点击 `♪` 只负责按当前设置打开 / 关闭声音。
 - `ambientSoundOn` 表示用户本次使用里“想不想开环境音”的意图，不等同于当前是否真的有音频实例在播放。页面跳转、进入设置页、首页 / 呼吸页互切、当前视频无匹配音频，都不能擅自把这个用户意图改成 `false`。
 - 首页进入设置页、呼吸页进入设置页、设置页保存返回首页 / 呼吸页时，只能暂停或销毁当前 `InnerAudioContext`，不能关闭 `♪` 状态；返回后如果 `ambientSoundOn === true` 且当前视频 / 自定义混音有可播放音轨，应自动恢复环境音。
 - 首页和呼吸页共用同一个 `♪` 开关状态。用户从首页开着环境音进入呼吸页，或从呼吸页返回首页，状态必须一致；只有用户主动点击 `♪` 才能切换该状态。
 - 切换视频时，如果视频 A 有音源且用户开着环境音，滑到视频 B 因无音源而暂时无声，再滑到视频 C 有音源时，必须按用户原本的开声意图自动恢复 C 的环境音。视频 B 的“无音源”只能造成临时静音，不能永久关闭 `ambientSoundOn`。
-- 小程序真正切后台、退出、从微信切走后再回来时，声音安全优先：必须关闭环境音用户意图并停止播放器，避免用户忘记后手机突然发声。
+- 用户已经主动打开环境音后，只在首页、呼吸页、设置页之间的页面内导航保留 `ambientSoundOn`；锁屏、按 Home 或从微信切到后台都要停止播放器并在回前台时重置为无声。
+- 当前小程序不启用 `requiredBackgroundModes: ["audio"]`，也不使用 `wx.getBackgroundAudioManager()` 做锁屏续播。原因是该能力只有单路后台音频，不能实现当前前台的多轨混音和交叉淡入淡出，结尾循环会有可感知断点。
+- 前台环境音继续使用多个 `InnerAudioContext` 做淡入淡出和多轨混音；锁屏 / 后台不播放环境音。
+- 颂钵音只在前台播放包内 `miniprogram/assets/breath.mp3`；锁屏 / 后台不播放颂钵音，也不需要上传远程 `breath.mp3`。
 - 设置页“视频背景音”当前有两种模式：
   - `视频自带音频`：产品文案如此显示，但实际仍然播放 `miniprogram/data/ambient-audio.js` 中为视频预制 / 匹配的 COS 环境音，不播放 `<video>` 原始音轨，视频元素继续保持静音。
   - `自定义混音`：忽略当前视频匹配关系，所有视频都固定播放用户保存的 `customAmbientMix`。
@@ -356,14 +408,15 @@ local-miniprogram-ambient-audio/
 - 呼吸动画必须按设置节奏驱动：吸气为花朵从最小放大到最大；吸气后屏息为最大状态轻微明暗变化；呼气为最大缩小到最小；呼气后屏息为最小状态轻微明暗变化。屏息值为 `0` 时跳过该阶段，不能卡在最大或最小状态。
 - 呼吸页底部保留 `触感`、`颂钵音`、`自定义练习` 三个入口；点击自定义练习或在呼吸页右滑后，花朵先隐藏，中央显示 `3 / 2 / 1` 倒计时，并展示练习说明。
 - 设置页的 `保留呼吸页设置` 只影响呼吸页底部的 `触感` 和 `颂钵音` 两个开关，不影响首页 / 呼吸页环境音 `♪`。
-- `保留呼吸页设置` 关闭时，重新进入小程序会自动关闭 `zenHaptics` 和 `zenSound`；打开时可以在未切后台的同一次前台使用中保留触感和颂钵音偏好。
-- 无论 `保留呼吸页设置` 是否打开，只要小程序真正切后台、退出、从微信切走后再回来，都必须先把 `zenSound` 关掉并停止颂钵音，避免手机突然发声。触感是否保留仍按 `rememberZenCues` 设置执行。
+- `保留呼吸页设置` 关闭时，真正退出后重新进入小程序会自动关闭 `zenHaptics` 和 `zenSound`；打开时可以跨普通重新进入保留触感和颂钵音偏好。但锁屏、按 Home、从微信临时切到后台都要停止本次呼吸提示和颂钵音，回前台默认无声。
+- 微信 `App.onHide` 触发时，无论是锁屏、切后台还是真正退出，都停止 `zenSound` 和当前颂钵音，避免后台或重新打开时突然发声。触感是否跨普通重新进入保留仍按 `rememberZenCues` 设置执行。
 - 自定义练习说明格式为三行：`本次练习*组`、按非零阶段拼接的节奏行、`可在设置中修改`。阶段值为 `0` 时，对应文字和箭头都不展示。
 - 自定义练习倒计时结束后，不能让数字 `1` 二次闪现；小花和 `吸气` 字样需要淡入后再启动正式吸气动画。
 - 呼吸舞台、倒计时数字、小花和呼吸字样必须固定在屏幕中心附近，不得因为下方提示从三行变成一行而跳位；提示文字单独定位在呼吸舞台下方。
 - 自定义练习正式开始后，同一位置显示剩余组数；完成后花朵用约 3 秒散开并淡到完全透明，同时显示 `本次练习完成，恢复默认呼吸`。
 - 完成动画结束后必须先把花朵隐藏并重置到最小状态，再淡入小花和 `吸气` 字样，最后启动默认呼吸；不得在完成文字还未消失时提前启动默认呼吸，避免出现小花突然跳成大花。
 - 呼吸触感只在用户打开 `触感` 时触发。吸气触感随吸气时长缩放；有屏息阶段时，在屏息切换到下一阶段的节点播放轻触感提示；未开启触感或对应屏息为 `0` 时不得振动。
+- 锁屏 / 后台时主动清掉呼吸 phase timer 和 haptic timer；微信小程序没有可靠后台触感能力，当前小程序不做锁屏触感续播。
 
 ### 小程序直接 URL 已删除
 
@@ -537,7 +590,7 @@ https://video.huxizen.com
 - 腾讯云当前这单是 `huxizen.com` 的网站/域名 ICP 备案，主要服务于后续 `video.huxizen.com` CDN 域名。
 - 微信公众平台里还要检查小程序本体备案状态。若后台显示小程序未备案或待补充备案，必须在微信公众平台完成小程序备案后才能最终发布。
 
-当前小程序只用 `wx.request` 获取天气、`wx.downloadFile` 缓存视频、`wx.createInnerAudioContext` 播放用户手动开启的 COS 环境音；没有 `wx.login`、`wx.getUserProfile`、`wx.getLocation`、上传文件、支付、订阅消息或用户事件上报。隐私指引里不要声明不存在的数据采集；若后续增加定位、openid、统计或收藏上报，必须同步更新隐私保护指引。
+当前小程序只用 `wx.request` 获取天气、`wx.downloadFile` 缓存视频、`wx.createInnerAudioContext` 播放用户手动开启的前台声音；没有 `wx.login`、`wx.getUserProfile`、`wx.getLocation`、上传文件、支付、订阅消息、后台音频或用户事件上报。隐私指引里不要声明不存在的数据采集；若后续增加定位、openid、统计、后台音频或收藏上报，必须同步更新隐私保护指引。
 
 ### 当前下一步
 

@@ -358,6 +358,8 @@ Page({
   },
 
   onHide() {
+    if (!this.suspendMediaOnPageHide) return;
+    this.suspendMediaOnPageHide = false;
     this.suspendAmbientSound();
     this.stopZenCues();
   },
@@ -1155,6 +1157,22 @@ Page({
     }
   },
 
+  handleAppBackground() {
+    this.stopAmbientAudio();
+    this.stopZenCues();
+    return false;
+  },
+
+  handleAppForeground() {
+    this.stopAmbientAudio();
+    this.stopZenCues();
+  },
+
+  handleAppExit() {
+    this.stopAmbientAudio();
+    this.stopZenCues();
+  },
+
   syncAmbientAudioForCurrentVideo() {
     if (!this.data.ambientSoundOn) return;
     const track = this.currentAmbientTrack();
@@ -1716,7 +1734,9 @@ Page({
     this.resetBreathPose(() => {
       this.startZenPhase('inhale');
     });
-    if (this.data.settings.zenSound) this.playZenSound();
+    if (this.data.settings.zenSound) {
+      this.playZenSound();
+    }
   },
 
   stopZenCues() {
@@ -2108,6 +2128,7 @@ Page({
     const from = (source === 'zen' || source === 'home')
       ? source
       : this.data.zenActive ? 'zen' : 'home';
+    this.suspendMediaOnPageHide = true;
     wx.navigateTo({
       url: `/pages/settings/settings?from=${from}`,
     });

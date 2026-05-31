@@ -2,302 +2,851 @@
 
 module.exports = Object.freeze([
   {
-    "videoId": "mixkit-sunset-reveal-over-scenic-lagoon-101208",
+    "videoId": "mixkit-swiss-alps-snow-timelapse-4283",
     "mix": [
       {
-        "trackId": "sky"
+        "trackId": "wind",
+        "volume": 0.67
+      },
+      {
+        "trackId": "sky",
+        "volume": 0.08
       }
     ],
-    "notes": "落日泻湖：以开阔天空氛围兜底，避免硬配海浪。"
+    "notes": "瑞士雪云：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "mixkit-aerial-view-of-a-city-during-the-night-4308",
+    "videoId": "pixabay-348904",
     "mix": [
       {
-        "trackId": "sky"
+        "trackId": "ocean",
+        "volume": 0.5
       }
     ],
-    "notes": "东京暮色：城市夜景暂用高空氛围，保持安静。"
+    "notes": "岩岸海浪：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "mixkit-city-of-tokyo-at-night-4383",
+    "videoId": "pixabay-344380",
     "mix": [
       {
-        "trackId": "sky"
+        "trackId": "ocean",
+        "volume": 0.5
       }
     ],
-    "notes": "东京夜城：城市夜景暂用高空氛围，避免街噪破坏屏保感。"
+    "notes": "蓝海航岸：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-347325",
+    "videoId": "pixabay-76681",
     "mix": [
       {
-        "trackId": "sky"
+        "trackId": "wind",
+        "volume": 0.31
+      },
+      {
+        "trackId": "waterfall",
+        "volume": 1
+      },
+      {
+        "trackId": "ocean",
+        "volume": 0.21
       }
     ],
-    "notes": "云峰落日：山云主体，使用高空氛围。"
+    "notes": "岩瀑白浪：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-323513",
+    "videoId": "pixabay-339840",
     "mix": [
       {
-        "trackId": "sky"
+        "trackId": "oceanGulls",
+        "volume": 0.64
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.2
       }
     ],
-    "notes": "摩纳哥港：港湾画面不硬配海浪，使用高空氛围。"
+    "notes": "海上冲浪：手工筛选必选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-328740",
     "mix": [
       {
-        "trackId": "sky"
+        "trackId": "sky",
+        "volume": 0.52
       }
     ],
-    "notes": "晨雾阿尔卑斯：山体与云雾主体，使用高空氛围。"
+    "notes": "晨雾阿尔卑斯：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-334716",
+    "mix": [
+      {
+        "trackId": "oceanGulls",
+        "volume": 0.53
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.2
+      }
+    ],
+    "notes": "佛得角海岸：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-330898",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.14
+      },
+      {
+        "trackId": "waterfall",
+        "volume": 0.31
+      },
+      {
+        "trackId": "river",
+        "volume": 0.6
+      }
+    ],
+    "notes": "冬河森林：手工筛选备选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-181376",
     "mix": [
       {
-        "trackId": "birds"
+        "trackId": "wind",
+        "volume": 0.12
+      },
+      {
+        "trackId": "river",
+        "volume": 0.02
+      },
+      {
+        "trackId": "forestWindBirds",
+        "volume": 0.37
       }
     ],
-    "notes": "木舟渔人：轻鸟鸣比水声更克制。"
+    "notes": "木舟渔人：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-325502",
+    "videoId": "pixabay-338904",
     "mix": [
       {
-        "trackId": "sky"
+        "trackId": "oceanGulls",
+        "volume": 0.49
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.19
       }
     ],
-    "notes": "雪原冷林：冷静开阔氛围，使用高空音。"
+    "notes": "浅滩海纹：手工筛选备选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-305657",
     "mix": [
       {
-        "trackId": "forestWindBirds"
+        "trackId": "forestWindBirds",
+        "volume": 0.54
       }
     ],
-    "notes": "阿尔卑斯山径：用户指定山林风鸟。"
+    "notes": "阿尔卑斯山径：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-108366",
+    "videoId": "pixabay-306155",
     "mix": [
       {
-        "trackId": "underwater"
-      }
-    ],
-    "notes": "淡水鱼群：用户指定水下氛围。"
-  },
-  {
-    "videoId": "pixabay-287510",
-    "mix": [
-      {
-        "trackId": "river"
-      }
-    ],
-    "notes": "苔径深林：用户指定溪流。"
-  },
-  {
-    "videoId": "pixabay-307864",
-    "mix": [
-      {
-        "trackId": "sky"
-      }
-    ],
-    "notes": "稻田风机：用户指定高空氛围。"
-  },
-  {
-    "videoId": "pixabay-276047",
-    "mix": [
-      {
-        "trackId": "sky"
-      }
-    ],
-    "notes": "西峡鸟影：用户指定高空氛围。"
-  },
-  {
-    "videoId": "pixabay-283431",
-    "mix": [
-      {
-        "trackId": "sky"
-      }
-    ],
-    "notes": "山田星田：用户指定高空氛围。"
-  },
-  {
-    "videoId": "pixabay-266987",
-    "mix": [
-      {
-        "trackId": "sky",
+        "trackId": "oceanGulls",
         "volume": 0.52
-      },
-      {
-        "trackId": "birds",
-        "volume": 0.16
-      }
-    ],
-    "notes": "春林直道：sky 为主，轻混鸟声。"
-  },
-  {
-    "videoId": "pixabay-240841",
-    "mix": [
-      {
-        "trackId": "sky",
-        "volume": 1
-      },
-      {
-        "trackId": "birds",
-        "volume": 0.08
-      }
-    ],
-    "notes": "富士晨塔：天空为主，鸟声极轻。"
-  },
-  {
-    "videoId": "pixabay-265501",
-    "mix": [
-      {
-        "trackId": "forestWindBirds"
-      }
-    ],
-    "notes": "雏鸭草间：用户指定山林风鸟。"
-  },
-  {
-    "videoId": "pixabay-232561",
-    "mix": [
-      {
-        "trackId": "tractor"
-      }
-    ],
-    "notes": "麦田收割：特殊视频使用收割机音，且不进入自定义候选。"
-  },
-  {
-    "videoId": "pixabay-191159",
-    "mix": [
-      {
-        "trackId": "wind"
-      }
-    ],
-    "notes": "雪羽海鸥：用户指定风声，避免海浪过强。"
-  },
-  {
-    "videoId": "pixabay-268528",
-    "mix": null,
-    "notes": "樱光春枝：用户指定无音频。"
-  },
-  {
-    "videoId": "pixabay-260895",
-    "mix": [
-      {
-        "trackId": "sky"
-      }
-    ],
-    "notes": "里斯本圣像：用户指定高空氛围。"
-  },
-  {
-    "videoId": "pixabay-260397",
-    "mix": [
-      {
-        "trackId": "wind"
-      }
-    ],
-    "notes": "瑞士雾海：用户指定风声。"
-  },
-  {
-    "videoId": "pixabay-253436",
-    "mix": [
-      {
-        "trackId": "sky"
-      }
-    ],
-    "notes": "冰岛火丘：火山地貌不硬配火声，使用高空氛围。"
-  },
-  {
-    "videoId": "pixabay-271161",
-    "mix": [
-      {
-        "trackId": "waterfall"
-      }
-    ],
-    "notes": "青苔溪石：用户指定瀑布。"
-  },
-  {
-    "videoId": "pixabay-204006",
-    "mix": [
-      {
-        "trackId": "sky"
-      }
-    ],
-    "notes": "金云暮天：用户指定高空氛围。"
-  },
-  {
-    "videoId": "pixabay-221180",
-    "mix": [
-      {
-        "trackId": "sky"
-      }
-    ],
-    "notes": "云隙光束：用户指定高空氛围。"
-  },
-  {
-    "videoId": "pixabay-228847",
-    "mix": [
-      {
-        "trackId": "waterfall"
-      }
-    ],
-    "notes": "山涧白瀑：用户指定瀑布。"
-  },
-  {
-    "videoId": "pixabay-28707",
-    "mix": [
-      {
-        "trackId": "waterfall"
-      }
-    ],
-    "notes": "尼亚加拉白潮：用户指定瀑布。"
-  },
-  {
-    "videoId": "pixabay-175876",
-    "mix": [
-      {
-        "trackId": "sky",
-        "volume": 0.24
       },
       {
         "trackId": "wind",
         "volume": 0.12
       }
     ],
-    "notes": "古堡帆影：低音量高空 + 风声轻混。"
+    "notes": "静海红日：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-111179",
+    "videoId": "pixabay-258799",
     "mix": [
       {
-        "trackId": "sky"
+        "trackId": "forest",
+        "volume": 0.54
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.12
       }
     ],
-    "notes": "晴空云影：用户指定高空氛围。"
+    "notes": "冬晨雾林：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-293788",
+    "mix": [
+      {
+        "trackId": "oceanGulls",
+        "volume": 0.49
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.19
+      }
+    ],
+    "notes": "碧岛航岸：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-287510",
+    "mix": [
+      {
+        "trackId": "river",
+        "volume": 0.55
+      },
+      {
+        "trackId": "forest",
+        "volume": 0.2
+      }
+    ],
+    "notes": "苔径深林：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-286278",
+    "mix": [
+      {
+        "trackId": "ocean",
+        "volume": 0.5
+      }
+    ],
+    "notes": "梦海缓波：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-283431",
+    "mix": [
+      {
+        "trackId": "sky",
+        "volume": 0.5
+      },
+      {
+        "trackId": "forestWindBirds",
+        "volume": 0.03
+      }
+    ],
+    "notes": "山田星田：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-275983",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.14
+      },
+      {
+        "trackId": "sky",
+        "volume": 0.13
+      },
+      {
+        "trackId": "oceanGulls",
+        "volume": 0.63
+      }
+    ],
+    "notes": "海上鸟居：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-271161",
+    "mix": [
+      {
+        "trackId": "waterfall",
+        "volume": 0.44
+      },
+      {
+        "trackId": "river",
+        "volume": 0.64
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.1
+      },
+      {
+        "trackId": "forest",
+        "volume": 0.18
+      }
+    ],
+    "notes": "青苔溪石：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-266987",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.31
+      },
+      {
+        "trackId": "sky",
+        "volume": 0.44
+      },
+      {
+        "trackId": "forest",
+        "volume": 0.24
+      }
+    ],
+    "notes": "春林直道：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-218714",
+    "mix": [
+      {
+        "trackId": "oceanGulls",
+        "volume": 0.5
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.13
+      }
+    ],
+    "notes": "椰影海湾：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-260397",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.54
+      },
+      {
+        "trackId": "forestWindBirds",
+        "volume": 0.13
+      }
+    ],
+    "notes": "瑞士雾海：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-214409",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.24
+      },
+      {
+        "trackId": "sky",
+        "volume": 0.47
+      }
+    ],
+    "notes": "云层缓流：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-204006",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.25
+      },
+      {
+        "trackId": "sky",
+        "volume": 0.25
+      }
+    ],
+    "notes": "金云暮天：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-215484",
+    "mix": [
+      {
+        "trackId": "river",
+        "volume": 0.3
+      },
+      {
+        "trackId": "oceanGulls",
+        "volume": 0.26
+      }
+    ],
+    "notes": "海面银纹：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-221180",
+    "mix": [
+      {
+        "trackId": "sky",
+        "volume": 0.52
+      }
+    ],
+    "notes": "云隙光束：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-183960",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.2
+      },
+      {
+        "trackId": "waterfall",
+        "volume": 0.24
+      },
+      {
+        "trackId": "oceanGulls",
+        "volume": 0.64
+      }
+    ],
+    "notes": "晨海余晖：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-228847",
+    "mix": [
+      {
+        "trackId": "waterfall",
+        "volume": 0.55
+      },
+      {
+        "trackId": "river",
+        "volume": 0.22
+      },
+      {
+        "trackId": "forest",
+        "volume": 0.14
+      }
+    ],
+    "notes": "山涧白瀑：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-47213",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.31
+      },
+      {
+        "trackId": "waterfall",
+        "volume": 1
+      },
+      {
+        "trackId": "ocean",
+        "volume": 0.21
+      }
+    ],
+    "notes": "多洛米蒂瀑河：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-28707",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.31
+      },
+      {
+        "trackId": "waterfall",
+        "volume": 1
+      },
+      {
+        "trackId": "ocean",
+        "volume": 0.21
+      }
+    ],
+    "notes": "尼亚加拉白潮：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-185096",
+    "mix": [
+      {
+        "trackId": "oceanGulls",
+        "volume": 0.54
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.14
+      }
+    ],
+    "notes": "海边书页：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-227567",
+    "mix": [
+      {
+        "trackId": "ocean",
+        "volume": 0.22
+      },
+      {
+        "trackId": "oceanGulls",
+        "volume": 0.52
+      }
+    ],
+    "notes": "晨浪金光：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-24216",
+    "mix": [
+      {
+        "trackId": "ocean",
+        "volume": 0.5
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.12
+      }
+    ],
+    "notes": "蓝岸斜浪：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-4006",
+    "mix": [
+      {
+        "trackId": "ocean",
+        "volume": 0.5
+      },
+      {
+        "trackId": "oceanGulls",
+        "volume": 0.1
+      }
+    ],
+    "notes": "金沙晨浪：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-257593",
+    "mix": [
+      {
+        "trackId": "fire",
+        "volume": 0.47
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.17
+      }
+    ],
+    "notes": "夜营火光：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-307864",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.3
+      },
+      {
+        "trackId": "sky",
+        "volume": 0.22
+      }
+    ],
+    "notes": "稻田风机：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-232561",
+    "mix": [
+      {
+        "trackId": "tractor",
+        "volume": 0.5
+      }
+    ],
+    "notes": "麦田收割：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-148594",
+    "mix": [
+      {
+        "trackId": "fire",
+        "volume": 0.47
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.17
+      }
+    ],
+    "notes": "营火煮茶：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-190776",
+    "mix": [
+      {
+        "trackId": "fire",
+        "volume": 0.47
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.17
+      }
+    ],
+    "notes": "炉火冬夜：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-11722",
+    "mix": [
+      {
+        "trackId": "lightRain",
+        "volume": 0.46
+      },
+      {
+        "trackId": "fire",
+        "volume": 0.12
+      }
+    ],
+    "notes": "雨窗流滴：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-67358",
+    "mix": [
+      {
+        "trackId": "sky",
+        "volume": 0.25
+      },
+      {
+        "trackId": "underwater",
+        "volume": 0.68
+      }
+    ],
+    "notes": "墨云入水：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-64630",
+    "mix": [
+      {
+        "trackId": "sky",
+        "volume": 0.25
+      },
+      {
+        "trackId": "underwater",
+        "volume": 0.68
+      }
+    ],
+    "notes": "彩墨云生：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-333600",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.55
+      },
+      {
+        "trackId": "forestWindBirds",
+        "volume": 0.07
+      }
+    ],
+    "notes": "冬梅红花：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-268528",
+    "mix": [
+      {
+        "trackId": "birds",
+        "volume": 0.5
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.01
+      }
+    ],
+    "notes": "樱光春枝：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-265271",
+    "mix": [
+      {
+        "trackId": "forest",
+        "volume": 0.54
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.04
+      }
+    ],
+    "notes": "兰卡林蜥：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-191159",
+    "mix": [
+      {
+        "trackId": "wind",
+        "volume": 0.54
+      },
+      {
+        "trackId": "forestWindBirds",
+        "volume": 0.1
+      }
+    ],
+    "notes": "雪羽海鸥：手工筛选备选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-140111",
     "mix": [
       {
-        "trackId": "oceanGulls"
+        "trackId": "wind",
+        "volume": 0.12
+      },
+      {
+        "trackId": "birds",
+        "volume": 0.04
+      },
+      {
+        "trackId": "ocean",
+        "volume": 0.07
+      },
+      {
+        "trackId": "oceanGulls",
+        "volume": 0.56
       }
     ],
-    "notes": "暮海群鸥：用户指定海鸥海浪。"
+    "notes": "暮海群鸥：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-66810",
+    "mix": [
+      {
+        "trackId": "forestWindBirds",
+        "volume": 0.54
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.04
+      }
+    ],
+    "notes": "晨雾露草：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-213616",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.55
+      }
+    ],
+    "notes": "蓝幕水母：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-16166",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.55
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.01
+      }
+    ],
+    "notes": "小鱼悬游：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-182908",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.55
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.03
+      }
+    ],
+    "notes": "葵丛小丑：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-273312",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.55
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.02
+      }
+    ],
+    "notes": "海龟慢游：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-242125",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.55
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.03
+      }
+    ],
+    "notes": "水母成群：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-127713",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.55
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.01
+      }
+    ],
+    "notes": "海葵小丑：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-6636",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.55
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.02
+      }
+    ],
+    "notes": "馆中群鱼：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-83061",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.28
+      }
+    ],
+    "notes": "浅沙波光：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-63427",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.5
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.01
+      }
+    ],
+    "notes": "水下光束：手工筛选备选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-159703",
     "mix": [
       {
-        "trackId": "river"
+        "trackId": "river",
+        "volume": 0.52
       }
     ],
-    "notes": "雪河气泡：用户指定溪流。"
+    "notes": "雪河气泡：手工筛选必选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-83059",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.28
+      }
+    ],
+    "notes": "池砖波光：手工筛选备选，环境音按筛选表设置。"
+  },
+  {
+    "videoId": "pixabay-48596",
+    "mix": [
+      {
+        "trackId": "underwater",
+        "volume": 0.5
+      },
+      {
+        "trackId": "wind",
+        "volume": 0.01
+      }
+    ],
+    "notes": "深蓝日束：手工筛选必选，环境音按筛选表设置。"
   }
 ]);

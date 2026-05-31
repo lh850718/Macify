@@ -79,7 +79,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--category",
-        help="Comma-separated category names to include, for example: Landscapes,Cities.",
+        help="Comma-separated category names to include, for example: Landscapes,Underwater.",
     )
     parser.add_argument(
         "--list-categories",

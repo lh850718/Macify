@@ -61,7 +61,7 @@
         "url": { "type": "string", "format": "uri" },
         "previewImage": { "type": "string", "format": "uri" },
         "category": {
-          "enum": ["Landscapes", "Cities", "Underwater", "AnimalsAndPlants", "Motion"]
+          "enum": ["Landscapes", "Underwater", "AnimalsAndPlants", "Motion"]
         },
         "subcategories": { "type": "array", "items": { "type": "string" } },
         "tags": { "type": "array", "items": { "type": "string" } },

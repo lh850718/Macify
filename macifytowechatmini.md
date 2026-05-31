@@ -71,9 +71,9 @@ Coverr
 
 | 来源 | 一期目标 | 当前候选数 | sample-approved | published | 备注 |
 | --- | ---: | ---: | ---: | ---: | --- |
-| Mixkit | 100 | 7 | 0 | 7 | 已发布 7 条；日本主题通过 3 条已上传 COS 并标记 published；其余 12 条已删除 |
+| Mixkit | 100 | 1 | 0 | 1 | 2026-05-31 手工筛选后仅保留 `瑞士雪云`，城市景观和其它未选中条目已从公开池删除 |
 | Pexels | 100 | 0 | 0 | 0 | 未开始 |
-| Pixabay | 100 | 92 | 0 | 92 | 已发布 92 条；本轮 7 条 Pixabay 样片已通过审片并上传 COS，`pixabay-183960` 重复输入已跳过，`pixabay-316029` 因 AI generated / low quality 未写入 |
+| Pixabay | 100 | 59 | 0 | 59 | 2026-05-31 手工筛选后保留 59 条；当前公开池共 60 条，包含 20 条 Flutter 首包必选和 40 条远端备选 |
 | Dareful | 100 | 0 | 0 | 0 | 未开始 |
 | Coverr | 100 | 0 | 0 | 0 | 未开始 |
 
@@ -113,7 +113,6 @@ Coverr
 
 ```text
 Landscapes
-Cities
 AnimalsAndPlants
 Motion
 Underwater
@@ -122,6 +121,8 @@ Underwater
 其中 `AnimalsAndPlants` 是代码枚举名，产品和中文记录里显示为“动植物”，用于鸟类、野生动物、海洋动物、植物、花卉和相关近景。旧枚举 `Animals` 已废弃，不再用于 Premium Free Aerial 清单。
 
 `Motion` 是代码枚举名，产品里显示为“运转”。用于火苗、篝火、壁炉、烟火等燃烧/化学现象，也用于齿轮转动、唱片机、风车/风机、收割机械等人造物品或机械运动。火山、熔岩这类仍以地貌为主的素材，默认继续归入 `Landscapes`，除非画面重点明显是燃烧/反应本身。
+
+2026-05-31 手工筛选后，`Cities` / `城市景观` 9 条已整类删除，不再作为小程序或 Flutter App 的公开分类入口；后续除非用户重新确认城市素材方向，不要再向公开池新增 `Cities`。
 
 不要使用 `Mac` / `其他` 分类。原本可能想归到 `Mac` 的视频，必须重新判断并归入上面这些主分类之一；如果无法归入，说明它不适合当前库。
 
@@ -179,9 +180,10 @@ npm run content:build
 
 - `content/` 已成为视频、环境音、视频/音频混合方案的单一来源。
 - 小程序已接入这条管线：运行 `npm run content:build` 会生成 `miniprogram/data/content-config.js`、`miniprogram/data/ambient-content.js`、`miniprogram/data/premium-free-aerial-videos.js` 和 `miniprogram/data/video-audio-mixes.js`。
-- Flutter 侧目前生成的是通用 JSON assets：`flutter_app/assets/content/*.json`。这只是 Flutter 内容资产准备，不代表真实 Flutter App 代码已经完成，因为当前仓库还没有正式 Flutter 工程。
+- Flutter 侧生成通用 JSON assets：`flutter_app/assets/content/*.json`；当前 `flutter_app/` 已是正式 Flutter 工程，并已接入这些内容资产。
 - Flutter 主项目文档位于 `flutter_app/PROJECT.md`；后续 Flutter 任何功能、资源、平台能力、依赖、权限或同步策略变化，都必须同步更新该文档。
-- `content-dist/` 是未来上传 COS/CDN 的远程内容包预留目录，用于后续做 `content-manifest.json` 远程更新。
+- `content-dist/` 是上传 COS/CDN 的远程内容包目录，用于后续做 `content-manifest.json` 远程更新；当前发布地址同时保留 `macify-premium/*.json` 和 `macify-premium/content/*.json`，推荐远端 manifest URL：`https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-premium/content/content-manifest.json`。
+- `content-manifest.json` 现在包含两类索引：`files` 记录生成 JSON 文件的 `bytes` / `sha256`；`media.videos` 和 `media.ambientTracks` 记录正式 MP4/MP3 的远端相对 `path`、`bytes`、`sha256`。这些媒体元数据由 `npm run content:build` 从本地正式媒体目录生成，Flutter 下载缓存时使用它做字节数和 sha256 校验。
 
 后续新增视频、音频或调整视频/音频匹配时，只改：
 
@@ -207,7 +209,7 @@ content-dist/*.json
 
 1. 确定真实 Flutter 工程目录。如果不是仓库里的 `flutter_app/`，构建时用 `FLUTTER_CONTENT_DIR=/path/to/flutter/assets/content npm run content:build` 指向真实工程。
 2. 在 Flutter 的 `pubspec.yaml` 加入 `assets/content/`。
-3. 写 Flutter `ContentRepository`，先读 `assets/content/content-manifest.json`，再读 `config.json`、`videos.json`、`ambient-tracks.json`、`ambient-rules.json`、`video-audio-mixes.json`。
+3. 写 Flutter `ContentRepository`，先读 `assets/content/content-manifest.json`，再读 `config.json`、`videos.json`、`ambient-tracks.json`、`ambient-rules.json`、`video-audio-mixes.json`。当前已完成第一版读取，并能解析 `content-manifest.json` 中的媒体 `bytes` / `sha256`。
 4. 写 Flutter 版音频匹配 resolver：显式 `video-audio-mixes` 优先；没有显式配置时按 `ambient-rules` 匹配；都没有则当前视频无环境音。
 5. 先做本地内置 assets 版本，保证 App 离线可启动；再做远程 manifest：启动时先用本地内容，后台检查远程 `contentVersion`，版本更高时下载 JSON 并缓存。这样以后多数内容更新不需要重新发 Flutter App 或小程序。
 6. Flutter 播放器和音频层应消费同一份 JSON，不要在 Dart 里重新维护一套视频清单、音频列表或匹配规则。
@@ -222,7 +224,7 @@ content-dist/*.json
 - 呼吸Zen 基于 GitHub 开源项目 `jason5ng32/Macify` 改造。原项目采用 MIT License，版权声明为 `Copyright (c) 2023 Jason Ng`，README Credits 记录创建者 `Jason Ng, Dofy, Setilis`；公开发布版必须在 `© 呼吸Zen` 授权记录页保留开源项目声明，并在 `miniprogram/OPEN_SOURCE_NOTICES.txt` 保留 MIT License 原文和项目链接，确保小程序上传包也带有许可声明。
 - 每条公开视频必须保留 `sourceName`、`sourcePage`、`sourceDownloadPage`、`license`、`attribution`、`licenseNotes`，这些字段是版权和授权追溯记录。
 - `description` 只写地点、人文、自然知识或公版诗句意象，不写素材来源、许可证、上传状态、候选状态或技术信息。
-- 版权声明不要塞进单条视频介绍文案。设置页左上标题直接显示 `© 呼吸Zen`，点击标题进入 `miniprogram/pages/licenses/licenses.*`；不要额外放右上角入口或“关于”区域。
+- 版权声明不要塞进单条视频介绍文案。设置页左上标题直接显示 `© 呆呆角`，点击标题进入 `miniprogram/pages/licenses/licenses.*`；不要额外放右上角入口或“关于”区域。
 - 授权记录页只保留首屏概要区域，不单独展示“记录”或“视频素材”区域。首屏不直接展示 `Mixkit`、`Pixabay` 等来源平台名。点 `Macify` 展示开源声明；点“公开素材”四个字才在同一区域内展示来源平台；点平台展示该平台视频名列表；点视频名展示作者/署名、许可证和备注。
 - 来源平台详情由生成后的 `premium-free-aerial-videos.js` 中 `qualityTier: 'published'` 的条目按 `sourceName` 自动生成；`SOURCE_PLATFORMS` 只保存平台许可说明文案，未来新增 `sourceName` 时同步补齐对应说明。
 - 未来每次新增公开视频、改来源平台、改许可证字段或新增 `sourceName`，都必须同步检查并更新授权记录页；如果只是新增同平台视频且清单字段完整，页面清单会自动带出，但仍要确认平台声明是否准确。
@@ -231,7 +233,7 @@ content-dist/*.json
 - 版权页总声明使用：
 
 ```text
-呼吸Zen 基于 Macify 改造；背景视频按公开素材平台许可用于应用内背景体验。素材版权归原作者或相应权利人所有；呼吸Zen 不声明拥有这些素材版权，也不提供素材下载、转售或独立素材库分发。
+呆呆角 基于 Macify 改造；背景视频按公开素材平台许可用于应用内背景体验。素材版权归原作者或相应权利人所有；呆呆角 不声明拥有这些素材版权，也不提供素材下载、转售或独立素材库分发。
 ```
 
 - 建议单条声明格式：
@@ -277,9 +279,9 @@ content-dist/*.json
   - `视频自带音频`：产品文案如此显示，但实际仍然播放 `miniprogram/data/ambient-audio.js` 中为视频预制 / 匹配的 COS 环境音，不播放 `<video>` 原始音轨，视频元素继续保持静音。
   - `自定义混音`：忽略当前视频匹配关系，所有视频都固定播放用户保存的 `customAmbientMix`。
 - 自定义混音设置保存在 `settings.customAmbientMix`，模式保存在 `settings.ambientAudioMode`。每条混音记录是 `{ trackId, volume }`，音量范围 `0-1`。
-- 自定义混音候选列表使用人类可懂的简洁名，例如 `林中风`、`瀑布`、`高空`、`火`、`小雨`、`溪流`、`鸟叫`、`山中鸟叫` 等；`tractor-harvesting.mp3` / `收割机` 只保留给 `麦田收割` 这类特殊视频，不作为用户自定义混音候选。
+- 自定义混音候选列表使用人类可懂的统一简洁名：`风声`、`瀑布`、`天空`、`炉火`、`雨声`、`溪流`、`鸟鸣`、`山林鸟鸣`、`森林`、`海浪`、`海浪海鸥`、`水下`。`tractor-harvesting.mp3` / `收割机` 只保留给 `麦田收割` 这类特殊视频，不作为用户自定义混音候选。
 - 自定义混音最多允许 5 个声音。不要轻易改成 10 个：每个声音平时占 1 个 `InnerAudioContext`，交叉循环瞬间会变成 2 个；5 个声音瞬间约 10 路，10 个声音瞬间约 20 路，iPhone / 低端机更容易耗电、延迟、卡顿或丢声。除非做过真机压力测试，否则保持 5。
-- 自定义混音里每个音轨选中后高亮，右侧显示音量滑杆；默认音量为 `0`。用户点击“开始试听”后可边调音边试听，试听和首页播放都按所有非零音量音轨混合，并为每个音轨独立交叉淡入淡出自动循环。
+- 自定义混音里每个音轨选中后高亮，右侧显示音量滑杆和实时百分比读数；默认音量为 `0`。用户点击“开始试听”后可边调音边试听，例如拖到 `森林54% + 鸟鸣15%` 时，试听和首页播放都按 `0.54 + 0.15` 的多轨混音播放，并为每个音轨独立交叉淡入淡出自动循环，方便复刻未来给视频配置的预制混音比例。
 - 首页 / 呼吸页 `♪` 打开自定义混音时，如果用户尚未把任何音轨音量调到非零，应提示去设置里调大混音音量。
 - 环境音使用 `wx.createInnerAudioContext({ useWebAudioImplement: true })`；循环播放不依赖硬 `loop`，而是在接近结尾时启动第二个同源音频实例，并用约 `2.6s` 交叉淡入淡出，避免循环断点。
 - 环境音切换视频时，如果新视频映射到另一种音频，也使用旧音频淡出、新音频淡入；如果新视频没有映射音频，则淡出当前环境音并显示无可用音轨状态，但保留 `ambientSoundOn`，等下一条有音源的视频自动恢复。
@@ -342,23 +344,23 @@ local-miniprogram-ambient-audio/
 
 该目录已加入 `.gitignore`，不要打进小程序包。环境音走远程 COS，不放入 `miniprogram/assets/`。
 
-当前 99 条公开视频的环境音映射统计（按音轨计数；多轨视频会在多个音轨里各计 1 次）：
+当前 60 条公开视频的环境音映射统计（按音轨计数；多轨视频会在多个音轨里各计 1 次）：
 
 ```text
-海浪 ocean-soft-waves.mp3: 16 条
-海鸥海浪 gentle-ocean-waves-birdsong-and-gull.mp3: 1 条
-水下 underwater-ambience.mp3: 22 条
-森林 forest-ambience.mp3: 5 条
-山林风鸟 forest-wind-and-birds.mp3: 3 条
-鸟鸣 birds.mp3: 5 条
-雨声 light-rain.mp3: 2 条
-炉火 fire-crackling.mp3: 3 条
-溪流 river-stream.mp3: 3 条
-瀑布 waterfall.mp3: 5 条
-风声 wind-in-trees.mp3: 3 条
-天空 mountain-sky-ambience.mp3: 18 条
+风声 wind-in-trees.mp3: 40 条
+海浪海鸥 gentle-ocean-waves-birdsong-and-gull.mp3: 13 条
+水下 underwater-ambience.mp3: 13 条
+天空 mountain-sky-ambience.mp3: 11 条
+海浪 ocean-soft-waves.mp3: 10 条
+瀑布 waterfall.mp3: 7 条
+山林鸟鸣 forest-wind-and-birds.mp3: 7 条
+溪流 river-stream.mp3: 7 条
+森林 forest-ambience.mp3: 6 条
+炉火 fire-crackling.mp3: 4 条
+鸟鸣 birds.mp3: 2 条
 收割机 tractor-harvesting.mp3: 1 条
-无音频: 15 条
+雨声 light-rain.mp3: 1 条
+无音频: 0 条
 ```
 
 当前用户指定的强制映射 / 排除：
@@ -404,7 +406,7 @@ local-miniprogram-ambient-audio/
 
 - 设置页“呼吸节奏”区提供两类设置：`默认呼吸` 和 `自定义练习`。
 - 默认呼吸节奏字段为：吸气、屏息、呼气、屏息，默认值 `5-0-5-0`。用户每次打开呼吸页进入的普通呼吸模式都使用这组默认节奏。
-- 自定义练习节奏字段为：吸气、屏息、呼气、屏息、组数，默认值 `4-7-8-0-8`。自定义练习只用于一次短时练习，完成后自动恢复默认呼吸模式。
+- 自定义练习节奏字段为：吸气、屏息、呼气、呼气后屏息、组数；小程序源码默认值是 `inhale=4, holdAfterInhale=7, exhale=8, holdAfterExhale=0, cycles=8`，UI 应表达为 `4-7-8 呼吸，8 组`，不要把组数写成第五段节奏。自定义练习只用于一次短时练习，完成后自动恢复默认呼吸模式。
 - 呼吸动画必须按设置节奏驱动：吸气为花朵从最小放大到最大；吸气后屏息为最大状态轻微明暗变化；呼气为最大缩小到最小；呼气后屏息为最小状态轻微明暗变化。屏息值为 `0` 时跳过该阶段，不能卡在最大或最小状态。
 - 呼吸页底部保留 `触感`、`颂钵音`、`自定义练习` 三个入口；点击自定义练习或在呼吸页右滑后，花朵先隐藏，中央显示 `3 / 2 / 1` 倒计时，并展示练习说明。
 - 设置页的 `保留呼吸页设置` 只影响呼吸页底部的 `触感` 和 `颂钵音` 两个开关，不影响首页 / 呼吸页环境音 `♪`。
@@ -819,6 +821,10 @@ pixabay-4006
 
 分类映射：用户“动植物”进入 `AnimalsAndPlants`；用户“自然”进入 `Landscapes`；用户“生活人物”的 `pixabay-185096` 因公开版无该枚举且画面核心为海边书页与海岸环境，暂归 `Landscapes` 并在 `subcategories` / `tags` 保留 `Book` / `Literature` / `Beach` / `Ocean`。上传同步显示 7 个新视频上传、92 个历史视频跳过；已给 99 条 ready 视频补 `public-read` ACL，并逐条验证本轮 7 个 COS 地址与远端 `manifest.json` 均为 `200 OK`，视频为 `Content-Type: video/mp4`。版权页的 Pixabay 平台声明已存在，授权记录页会按 `published` 条目自动纳入“公开素材 / Pixabay”列表。已将 `PREMIUM_FREE_AERIAL_SOURCE_VERSION` bump 到 `premium-free-aerial-1080p-cos-20260514-99`，更新后会失效旧 Premium 本地缓存。
 
+2026-05-31 按 `manual-video-screening-list.md` 完成公开视频池手工筛选后的 COS 发布：公开池从 99 条缩减为 60 条，`Cities` / `城市景观` 9 条整类删除，39 条筛掉视频对象已从 `macify-premium/videos/` 物理删除；公开 HEAD 校验显示 60 条保留视频全部 `200`，39 条删除视频均不再返回 `200`。已刷新远端 `manifest.json` / `manifest.csv` 为 60 条，并把 `content-dist/*.json` 上传到 `macify-premium/` 和 `macify-premium/content/`；远端 `content/content-manifest.json` 与本地 `content-dist/content-manifest.json` 字节一致，版本为 `premium-free-aerial-1080p-cos-20260531-screened-60`。本次密钥只作为命令环境变量使用，未写入仓库、文档或临时脚本；发布后应在腾讯云禁用或删除本次 API 密钥。
+
+同日已清理本地 `local-miniprogram-premium-aerial/videos/` 残留 MP4，只保留当前公开池 60 个文件。环境音连续播放在 1 分多钟处听到短暂重启是逻辑上可能的：多条音频素材本身时长在 79-120 秒，原实现只提前 2.6 秒创建下一播放器；远端加载慢、设置页拖动自定义混音音量或计时器错过时会露出 loop 边界。已把小程序首页和设置试听的环境音 loop 交叉淡入淡出扩大到 6 秒，并按当前播放进度计算下一次 loop，降低短暂停顿风险；Flutter 前台和 Android 后台音频也同步调整。
+
 2026-05-16 新增首页环境音。用户下载的原始音频位于 `/Users/hui/Downloads/sound/`，当前只选用与视频画面明确贴合的 6 类：海浪、水下、森林、鸟鸣、雨声、炉火；其他音频和没有贴合画面的类别暂不硬配。已新增：
 
 ```text
@@ -827,7 +833,7 @@ miniprogram/data/ambient-audio.js
 
 首页新增右下角 `♪` 环境音开关。默认无声音；每次退出、切后台或重新进入小程序都会关闭；首页和呼吸页之间切换时保持同一个环境音开关状态。用户主动点 `♪` 但当前视频无匹配音频时提示“当前视频暂无匹配音频”；如果是滑动切到无音源视频，则只临时淡出静音，不关闭用户开声意图，下一条有音源时自动恢复。环境音通过 `wx.createInnerAudioContext({ useWebAudioImplement: true })` 播放，循环时使用两个音频实例约 `2.6s` 交叉淡入淡出；切换到不同环境音时也做淡入淡出。呼吸页 `颂钵音` 仍使用 `miniprogram/assets/breath.mp3`，与首页环境音互不共享状态。
 
-`miniprogram/utils/videos.js` 已把 `tags` 暴露给首页视频对象，供 `ambientTrackForVideo` 做窄匹配。当前 99 条发布视频的映射统计：
+`miniprogram/utils/videos.js` 已把 `tags` 暴露给首页视频对象，供 `ambientTrackForVideo` 做窄匹配。当时 99 条发布视频的映射统计：
 
 ```text
 海浪 ocean-soft-waves.mp3: 19 条
@@ -839,7 +845,7 @@ miniprogram/data/ambient-audio.js
 无音频: 34 条
 ```
 
-完整映射以 `miniprogram/data/ambient-audio.js` 的规则实时计算。当前明确不配音频的类型包括城市、星空、烟火、火山、黑胶、猫、部分山云/瀑布等，避免声音和画面不贴；机械类原则上不硬配，后续仅在用户明确确认的特殊视频上做显式覆盖。
+完整映射以 `miniprogram/data/ambient-audio.js` 的规则实时计算。当时明确不配音频的类型包括城市、星空、烟火、火山、黑胶、猫、部分山云/瀑布等，避免声音和画面不贴；机械类原则上不硬配，后续仅在用户明确确认的特殊视频上做显式覆盖。
 
 已用 `ffmpeg loudnorm` / `volumedetect` 把 6 个上线用 MP3 转成 128kbps 并检查响度，输出目录：
 
@@ -927,7 +933,7 @@ macify-audio/tractor-harvesting.mp3
 海浪: 19
 水下: 23
 森林: 8
-山林风鸟: 4
+山林鸟鸣: 4
 鸟鸣: 5
 雨声: 2
 炉火: 3
@@ -960,7 +966,7 @@ macify-audio/mountain-sky-ambience.mp3
 海浪: 18
 水下: 22
 森林: 8
-山林风鸟: 3
+山林鸟鸣: 3
 鸟鸣: 5
 雨声: 2
 炉火: 3
@@ -994,10 +1000,10 @@ macify-audio/gentle-ocean-waves-birdsong-and-gull.mp3
 
 ```text
 海浪: 16
-海鸥海浪: 1
+海浪海鸥: 1
 水下: 22
 森林: 6
-山林风鸟: 3
+山林鸟鸣: 3
 鸟鸣: 6
 雨声: 2
 炉火: 3
@@ -1019,10 +1025,10 @@ macify-audio/gentle-ocean-waves-birdsong-and-gull.mp3
 
 ```text
 海浪: 16
-海鸥海浪: 1
+海浪海鸥: 1
 水下: 22
 森林: 5
-山林风鸟: 3
+山林鸟鸣: 3
 鸟鸣: 5
 雨声: 2
 炉火: 3
@@ -1037,8 +1043,8 @@ macify-audio/gentle-ocean-waves-birdsong-and-gull.mp3
 2026-05-17 继续完善设置页、背景音和真机天气：
 
 - 新增设置页“视频背景音”功能，支持 `视频自带音频` 与 `自定义混音` 两种模式。`视频自带音频` 实际播放当前视频对应的预制环境音；`自定义混音` 会在所有视频上固定播放用户保存的混音。
-- 自定义混音候选来自 `miniprogram/data/ambient-audio.js`，使用简洁中文名：林中风、瀑布、高空、火、小雨、溪流、鸟叫、山中鸟叫、森林、海浪、海鸥海浪、水下。`tractor` / 收割机音频不进入候选。
-- 自定义混音最多 5 个声音；每个声音默认音量 0，选中后高亮并出现音量滑杆。设置页提供“开始试听”，试听和首页播放都使用每个音轨独立 channel + 交叉淡入淡出循环。
+- 自定义混音候选来自共享内容源 `content/ambient-tracks.json`，生成到 `miniprogram/data/ambient-content.js` 和 `flutter_app/assets/content/ambient-tracks.json`。显示名统一为：风声、瀑布、天空、炉火、雨声、溪流、鸟鸣、山林鸟鸣、森林、海浪、海浪海鸥、水下。`tractor` / 收割机音频不进入候选。
+- 自定义混音最多 5 个声音；每个声音默认音量 0，选中后高亮并出现音量滑杆和实时百分比读数。设置页提供“开始试听”，试听和首页播放都使用每个音轨独立 channel + 交叉淡入淡出循环，可按 `森林54% + 鸟鸣15%` 这类预制混音比例直接试听。
 - 已讨论 10 个声音混音的风险：10 个声音平时约 10 路音频、交叉循环瞬间约 20 路，可能增加耗电、卡顿、延迟或丢声；当前保持 5 个。
 - 自定义混音功能已提交并推送到 private backup 仓库 `lh850718/HuxiZenbackup` 的 `main`，提交 `f0a101d3bfba7017dc2cd302f807a19f049dae8f`，提交备注 `增加自定义混音功能`。
 - 首页底部去掉引号 / 格言切换按钮；格言仍可通过点击中心语录区域切换。
@@ -1049,7 +1055,7 @@ macify-audio/gentle-ocean-waves-birdsong-and-gull.mp3
 - 首页纯视频模式由长按进入改为单击背景进入，纯视频模式单击背景返回普通首页；首页、呼吸页、纯视频模式都支持双击背景收藏 / 取消收藏当前视频，并显示小字提示。
 - 播放回退从“只保留一条上一条”改为本地播放序列索引：下滑可连续回退到本次序列第一条；回退后上滑优先沿序列向前，再从当前随机队列取新视频。
 - 环境音显式视频覆盖已从 `ambient-audio.js` 拆到 `miniprogram/data/video-audio-mixes.js`，每条记录包含 `videoId`、`mix` 和 `notes`，为未来 Flutter 版本共用视频 / 音频 / 混音关系做准备。
-- 新增 `npm run mini:ambient:validate`，校验音轨、显式视频混音、音量范围、视频 ID、音轨 ID，并统计 published 视频的环境音覆盖情况。当前结果：13 条音轨、32 条显式视频混音、84/99 条公开视频有环境音、15 条无音频。
+- 新增 `npm run mini:ambient:validate`，校验音轨、显式视频混音、音量范围、视频 ID、音轨 ID，并统计 published 视频的环境音覆盖情况。当前结果：13 条音轨、60 条显式视频混音、60/60 条公开视频有环境音、0 条无音频。
 - 上述“去掉引号按钮 / 设置页紧凑布局 / 天气真机兜底 / 手势与播放序列 / 环境音混音数据抽离 / 文档更新”是在 `f0a101d` 之后的新本地改动；截至本条记录写入时尚未提交和推送。
 
 继续工作时可以继续找下一批候选。下一次上传 COS 前必须重新向用户索取新的 `COS_SECRET_ID` / `COS_SECRET_KEY`。视频只允许上传到 `macify-premium/videos/`；首页环境音只允许上传到 `macify-audio/`；不要触碰 Apple 历史路径 `macify/videos/`。
@@ -1329,7 +1335,7 @@ attribution: TonyDias7 / Pixabay
 后续每一条非 Apple 视频都按下面流程走。任何步骤如果和顶部硬性原则冲突，一律停下并回到顶部硬性原则。
 
 1. 选候选：只从 `Mixkit` / `Pexels` / `Pixabay` / `Dareful` / `Coverr` 选，优先 4K、慢、稳、干净、无人物/水印/logo/字幕的航拍或自然延时。
-2. 补清单：在 `miniprogram/data/premium-free-aerial-videos.js` 新增记录，字段必须补齐来源、授权、地点/场景、中文说明，`category` 只能是 `Landscapes` / `Cities` / `AnimalsAndPlants` / `Motion` / `Underwater`，初始 `qualityTier: 'candidate'`。本地样片给用户审片时，必须同时列出 `displayName`、`locationName`、`description` 供用户确认。
+2. 补清单：在 `content/videos.json` 新增记录，字段必须补齐来源、授权、地点/场景、中文说明，`category` 只能是 `Landscapes` / `AnimalsAndPlants` / `Motion` / `Underwater`，初始 `qualityTier: 'candidate'`。本地样片给用户审片时，必须同时列出 `displayName`、`locationName`、`description` 供用户确认。
 3. 本地样片：先运行校验，再只生成这条样片：
 
 ```bash
@@ -3247,7 +3253,6 @@ NPS 分类选项: all, Landscapes, Underwater
 
 ```text
 Landscapes   自然景观
-Cities       城市景观
 AnimalsAndPlants 动植物
 Motion       运转
 Underwater   水下景观
@@ -3260,7 +3265,7 @@ Underwater   水下景观
 - 海岸、山脉、森林、峡谷、湖泊、沙漠、云层、日出日落、自然延时：统一归入 `Landscapes`
 - 鸟类、野生动物、海洋动物、植物、花卉和动植物近景：归入 `AnimalsAndPlants`
 - 真正水下镜头：归入 `Underwater`
-- 城市航拍、夜景、建筑群、道路网：只有非常高级、干净、接近 Apple 城市屏保时才归入 `Cities`
+- 城市航拍、夜景、建筑群、道路网：2026-05-31 起不进入当前公开池；`Cities` / `城市景观` 已整类删除
 - 火苗、篝火、壁炉、烟火等燃烧/化学现象，以及齿轮、唱片机、风机、收割机械等机械运动：归入 `Motion`
 - 不使用 `Mac` / `其他` 作为 Premium Free Aerial 分类；原本想归到 `Mac` 的视频必须归入上面这些主分类之一，否则不适合当前库
 
@@ -3437,7 +3442,7 @@ macify-premium/videos/<source-video-id>.mp4
 
 - 先候选、再验片、再小样、最后才批量转码和上传。
 - 5 个来源每源一期目标 100 条候选；100 不是永久上限，后续可以继续扩充，但不能为了凑数牺牲质感。
-- 当前 Premium Free Aerial 主分类只使用：`Landscapes`、`Cities`、`AnimalsAndPlants`、`Motion`、`Underwater`；Apple 原始 `Space` 分类在设置页显示为“太空”。
+- 当前 Premium Free Aerial 主分类只使用：`Landscapes`、`AnimalsAndPlants`、`Motion`、`Underwater`；Apple 原始 `Space` 分类在设置页显示为“太空”。`Cities` / `城市景观` 已在 2026-05-31 手工筛选后整类删除。
 - 不使用 `Mac` / `其他` 分类；原本可能归入 `Mac` 的视频必须归入上面这些主分类之一，否则不进入当前库。
 - 海岸、山脉、森林、湖泊、日落等细节只写入 `tags` / `subcategories` / `locationName` / `description`。
 - 每条视频必须保留来源页、授权、署名、授权备注、地点/场景、中文说明；后续审片必须同步审阅标题、地点和介绍文案。

@@ -33,5 +33,19 @@
   },
   "dependencies": {
     "suncalc": "^1.9.0"
-  }
+  },
+  "main": "deletequote.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lh850718/Macify.git"
+  },
+  "keywords": [],
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/lh850718/Macify/issues"
+  },
+  "homepage": "https://github.com/lh850718/Macify#readme"
 }

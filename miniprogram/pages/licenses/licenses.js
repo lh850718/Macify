@@ -33,7 +33,7 @@ const OPEN_SOURCE_NOTICES = Object.freeze([
     license: 'MIT License',
     copyright: 'Copyright (c) 2023 Jason Ng',
     authors: 'Jason Ng, Dofy, Setilis',
-    note: '呼吸Zen 基于 Macify 开源项目改造为微信小程序。公开发布版已移除 Apple Aerial 视频源，不展示或播放原项目的 Apple 视频内容。',
+    note: '呆呆角 基于 Macify 开源项目改造为微信小程序。公开发布版已移除 Apple Aerial 视频源，不展示或播放原项目的 Apple 视频内容。',
   },
 ]);
 

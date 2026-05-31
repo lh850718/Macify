@@ -12,7 +12,7 @@ const {
   normalizeCustomAmbientMix,
 } = require('../../data/ambient-audio.js');
 
-const AUDITION_AUDIO_CROSSFADE_MS = 2600;
+const AUDITION_AUDIO_CROSSFADE_MS = 6000;
 const AUDITION_AUDIO_FADE_STEP_MS = 100;
 const AUDITION_AUDIO_STOP_FADE_MS = 800;
 const AUDITION_VOLUME_ADJUST_MS = 160;
@@ -52,6 +52,17 @@ function createAuditionAudio(src, volume) {
     });
   }
   return audio;
+}
+
+function auditionLoopDelayMs(track, audio) {
+  const durationMs = Number(track && track.durationMs);
+  if (!Number.isFinite(durationMs) || durationMs <= 0) return null;
+  const currentTime = Number(audio && audio.currentTime);
+  const currentMs = Number.isFinite(currentTime) && currentTime > 0
+    ? currentTime * 1000
+    : 0;
+  const remainingMs = Math.max(0, durationMs - currentMs);
+  return Math.max(0, remainingMs - AUDITION_AUDIO_CROSSFADE_MS);
 }
 
 function categoryIndexFor(value, library) {
@@ -482,11 +493,12 @@ Page({
     if (!channel) return;
     this.clearAuditionChannelNextTimer(channel);
     const track = audio && audio.__auditionTrack;
-    if (!track || !track.durationMs) return;
+    const delayMs = auditionLoopDelayMs(track, audio);
+    if (delayMs == null) return;
     channel.nextTimer = setTimeout(() => {
       const currentChannel = this.auditionAudioChannels && this.auditionAudioChannels[channelKey];
       if (currentChannel && audio === currentChannel.current) this.crossfadeAuditionAudio(channelKey);
-    }, Math.max(0, track.durationMs - AUDITION_AUDIO_CROSSFADE_MS));
+    }, delayMs);
   },
 
   crossfadeAuditionAudio(channelKey, immediate = false) {

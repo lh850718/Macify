@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const DATA_FILE = resolve(ROOT, 'miniprogram/data/premium-free-aerial-videos.js');
-const ALLOWED_CATEGORIES = new Set(['Landscapes', 'Cities', 'Underwater', 'AnimalsAndPlants', 'Motion']);
+const ALLOWED_CATEGORIES = new Set(['Landscapes', 'Underwater', 'AnimalsAndPlants', 'Motion']);
 const ALLOWED_QUALITY_TIERS = new Set(['candidate', 'sample-approved', 'rejected', 'published']);
 const ALLOWED_SOURCES = new Set(['Mixkit', 'Pexels', 'Pixabay', 'Dareful', 'Coverr']);
 const REQUIRED_FIELDS = [

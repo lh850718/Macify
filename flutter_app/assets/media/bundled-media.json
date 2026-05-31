@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "videos": {
+    "pixabay-339840": "assets/media/videos/pixabay-339840.mp4",
+    "pixabay-328740": "assets/media/videos/pixabay-328740.mp4",
+    "pixabay-287510": "assets/media/videos/pixabay-287510.mp4",
+    "pixabay-286278": "assets/media/videos/pixabay-286278.mp4",
+    "pixabay-271161": "assets/media/videos/pixabay-271161.mp4",
+    "pixabay-204006": "assets/media/videos/pixabay-204006.mp4",
+    "pixabay-221180": "assets/media/videos/pixabay-221180.mp4",
+    "pixabay-183960": "assets/media/videos/pixabay-183960.mp4",
+    "pixabay-185096": "assets/media/videos/pixabay-185096.mp4",
+    "pixabay-227567": "assets/media/videos/pixabay-227567.mp4",
+    "pixabay-4006": "assets/media/videos/pixabay-4006.mp4",
+    "pixabay-257593": "assets/media/videos/pixabay-257593.mp4",
+    "pixabay-190776": "assets/media/videos/pixabay-190776.mp4",
+    "pixabay-11722": "assets/media/videos/pixabay-11722.mp4",
+    "pixabay-333600": "assets/media/videos/pixabay-333600.mp4",
+    "pixabay-265271": "assets/media/videos/pixabay-265271.mp4",
+    "pixabay-140111": "assets/media/videos/pixabay-140111.mp4",
+    "pixabay-6636": "assets/media/videos/pixabay-6636.mp4",
+    "pixabay-159703": "assets/media/videos/pixabay-159703.mp4",
+    "pixabay-48596": "assets/media/videos/pixabay-48596.mp4"
+  },
+  "ambientTracks": {
+    "ocean": "assets/media/audio/ocean-soft-waves.mp3",
+    "oceanGulls": "assets/media/audio/gentle-ocean-waves-birdsong-and-gull.mp3",
+    "underwater": "assets/media/audio/underwater-ambience.mp3",
+    "forest": "assets/media/audio/forest-ambience.mp3",
+    "forestWindBirds": "assets/media/audio/forest-wind-and-birds.mp3",
+    "river": "assets/media/audio/river-stream.mp3",
+    "waterfall": "assets/media/audio/waterfall.mp3",
+    "birds": "assets/media/audio/birds.mp3",
+    "wind": "assets/media/audio/wind-in-trees.mp3",
+    "sky": "assets/media/audio/mountain-sky-ambience.mp3",
+    "lightRain": "assets/media/audio/light-rain.mp3",
+    "fire": "assets/media/audio/fire-crackling.mp3",
+    "tractor": "assets/media/audio/tractor-harvesting.mp3"
+  }
+}

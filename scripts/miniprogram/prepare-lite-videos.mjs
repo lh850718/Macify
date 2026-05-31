@@ -42,7 +42,7 @@ Usage:
 Common:
   --source mini              Source list: mini, apple4k, or premiumFreeAerial. Default: mini
   --limit 5                  Convert the first N selected videos
-  --category Landscapes      Filter by category: Landscapes, Cities, AnimalsAndPlants, Underwater, Space
+  --category Landscapes      Filter by category: Landscapes, AnimalsAndPlants, Motion, Underwater, Space
   --id <uuid[,uuid]>         Convert only one or more video ids
   --name <text>              Filter by video name substring
   --out-dir <dir>            Output root. Default: ${DEFAULT_OUT_DIR}

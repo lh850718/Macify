@@ -27,7 +27,6 @@ const PUBLIC_SHUFFLE_SCOPES = Object.freeze([
   'all',
   'favorites',
   'Landscapes',
-  'Cities',
   'AnimalsAndPlants',
   'Motion',
   'Underwater',

@@ -32,7 +32,7 @@ const ZEN_AUDIO_VOLUME = 0.55;
 const ZEN_AUDIO_FALLBACK_DURATION_MS = 63384;
 const ZEN_AUDIO_CROSSFADE_MS = 2200;
 const ZEN_AUDIO_FADE_STEP_MS = 100;
-const AMBIENT_AUDIO_CROSSFADE_MS = 2600;
+const AMBIENT_AUDIO_CROSSFADE_MS = 6000;
 const AMBIENT_AUDIO_FADE_STEP_MS = 100;
 const AMBIENT_AUDIO_STOP_FADE_MS = 900;
 const VIDEO_REVEAL_MS = 520;
@@ -136,6 +136,17 @@ function createZenAudio(src, volume) {
 
 function createAmbientAudio(src, volume) {
   return createManagedAudio(src, volume, 'Ambient');
+}
+
+function ambientLoopDelayMs(track, audio) {
+  const durationMs = Number(track && track.durationMs);
+  if (!Number.isFinite(durationMs) || durationMs <= 0) return null;
+  const currentTime = Number(audio && audio.currentTime);
+  const currentMs = Number.isFinite(currentTime) && currentTime > 0
+    ? currentTime * 1000
+    : 0;
+  const remainingMs = Math.max(0, durationMs - currentMs);
+  return Math.max(0, remainingMs - AMBIENT_AUDIO_CROSSFADE_MS);
 }
 
 function otherVideoSlot(slot) {
@@ -1313,11 +1324,12 @@ Page({
     if (!channel) return;
     this.clearAmbientChannelNextTimer(channel);
     const track = audio && audio.__ambientTrack;
-    if (!track || !track.durationMs) return;
+    const delayMs = ambientLoopDelayMs(track, audio);
+    if (delayMs == null) return;
     channel.nextTimer = setTimeout(() => {
       const currentChannel = this.ambientAudioChannels && this.ambientAudioChannels[channelKey];
       if (currentChannel && audio === currentChannel.current) this.crossfadeAmbientAudio(channelKey);
-    }, Math.max(0, track.durationMs - AMBIENT_AUDIO_CROSSFADE_MS));
+    }, delayMs);
   },
 
   crossfadeAmbientAudio(channelKey, immediate = false) {

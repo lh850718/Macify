@@ -16,7 +16,7 @@ module.exports = Object.freeze({
     },
     "oceanGulls": {
       "id": "oceanGulls",
-      "label": "海鸥海浪",
+      "label": "海浪海鸥",
       "file": "gentle-ocean-waves-birdsong-and-gull.mp3",
       "durationMs": 115152,
       "volume": 0.66
@@ -37,7 +37,7 @@ module.exports = Object.freeze({
     },
     "forestWindBirds": {
       "id": "forestWindBirds",
-      "label": "山林风鸟",
+      "label": "山林鸟鸣",
       "file": "forest-wind-and-birds.mp3",
       "durationMs": 196104,
       "volume": 0.54
@@ -114,17 +114,17 @@ module.exports = Object.freeze({
     "underwater"
   ],
   "CUSTOM_AMBIENT_LABELS": {
-    "wind": "林中风",
+    "wind": "风声",
     "waterfall": "瀑布",
-    "sky": "高空",
-    "fire": "火",
-    "lightRain": "小雨",
+    "sky": "天空",
+    "fire": "炉火",
+    "lightRain": "雨声",
     "river": "溪流",
-    "birds": "鸟叫",
-    "forestWindBirds": "山中鸟叫",
+    "birds": "鸟鸣",
+    "forestWindBirds": "山林鸟鸣",
     "forest": "森林",
     "ocean": "海浪",
-    "oceanGulls": "海鸥海浪",
+    "oceanGulls": "海浪海鸥",
     "underwater": "水下"
   },
   "MAX_CUSTOM_AMBIENT_TRACKS": 5,

@@ -15,7 +15,6 @@ const CATEGORY_OPTIONS = Object.freeze([
   { value: 'all', label: '全部' },
   { value: FAVORITES_SCOPE, label: '收藏' },
   { value: 'Landscapes', label: '自然景观' },
-  { value: 'Cities', label: '城市景观' },
   { value: 'AnimalsAndPlants', label: '动植物' },
   { value: 'Motion', label: '运转' },
   { value: 'Underwater', label: '水下景观' },

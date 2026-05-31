@@ -419,6 +419,17 @@
   margin: 0;
 }
 
+.audio-volume-value {
+  width: 64rpx;
+  flex: 0 0 64rpx;
+  color: #16745f;
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .tap-soft {
   opacity: 0.76;
 }

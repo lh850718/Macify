@@ -1,17 +1,17 @@
 <view class="license-page">
   <view class="header">
-    <text class="title">© 呼吸Zen</text>
+    <text class="title">© 呆呆角</text>
   </view>
 
   <view class="section summary-section">
     <view class="body-copy">
-      <text>呼吸Zen 基于 </text>
+      <text>呆呆角 基于 </text>
       <text class="quiet-inline" bindtap="toggleOpenSource">Macify</text>
       <text> 改造；背景视频按 </text>
       <text class="quiet-inline" bindtap="toggleSources">公开素材</text>
       <text> 平台许可用于应用内背景体验。</text>
     </view>
-    <text class="quiet-note">素材版权归原作者或相应权利人所有；呼吸Zen 不声明拥有这些素材版权，也不提供素材下载、转售或独立素材库分发。</text>
+    <text class="quiet-note">素材版权归原作者或相应权利人所有；呆呆角 不声明拥有这些素材版权，也不提供素材下载、转售或独立素材库分发。</text>
 
     <view class="detail-panel" wx:if="{{isOpenSourceExpanded}}">
       <text class="detail-title">{{openSourceNotice.name}}</text>

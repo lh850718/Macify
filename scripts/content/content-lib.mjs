@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,6 +8,8 @@ export const CONTENT_DIR = resolve(ROOT, 'content');
 export const MINIPROGRAM_DATA_DIR = resolve(ROOT, 'miniprogram/data');
 export const DEFAULT_FLUTTER_CONTENT_DIR = resolve(ROOT, 'flutter_app/assets/content');
 export const REMOTE_CONTENT_DIR = resolve(ROOT, 'content-dist');
+export const LOCAL_PREMIUM_VIDEO_DIR = resolve(ROOT, 'local-miniprogram-premium-aerial/videos');
+export const LOCAL_AMBIENT_AUDIO_DIR = resolve(ROOT, 'local-miniprogram-ambient-audio/audio');
 
 export const REQUIRED_VIDEO_FIELDS = [
   'id',
@@ -53,7 +55,7 @@ const NON_BLANK_VIDEO_FIELDS = [
   'qualityTier',
 ];
 
-const ALLOWED_CATEGORIES = new Set(['Landscapes', 'Cities', 'Underwater', 'AnimalsAndPlants', 'Motion']);
+const ALLOWED_CATEGORIES = new Set(['Landscapes', 'Underwater', 'AnimalsAndPlants', 'Motion']);
 const ALLOWED_QUALITY_TIERS = new Set(['candidate', 'sample-approved', 'rejected', 'published']);
 const ALLOWED_SOURCES = new Set(['Mixkit', 'Pexels', 'Pixabay', 'Dareful', 'Coverr']);
 
@@ -382,6 +384,20 @@ export function commonJsExport(value) {
 
 export function sha256(text) {
   return createHash('sha256').update(text).digest('hex');
+}
+
+export function fileBytes(filePath) {
+  return statSync(filePath).size;
+}
+
+export function sha256File(filePath) {
+  return new Promise((resolveHash, reject) => {
+    const hash = createHash('sha256');
+    const stream = createReadStream(filePath);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolveHash(hash.digest('hex')));
+  });
 }
 
 export function relativeToRoot(filePath) {

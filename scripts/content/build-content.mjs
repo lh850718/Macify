@@ -2,17 +2,22 @@
 import { resolve } from 'node:path';
 import {
   DEFAULT_FLUTTER_CONTENT_DIR,
+  LOCAL_AMBIENT_AUDIO_DIR,
+  LOCAL_PREMIUM_VIDEO_DIR,
   MINIPROGRAM_DATA_DIR,
   REMOTE_CONTENT_DIR,
   ROOT,
   commonJsExport,
+  fileBytes,
   readContent,
   relativeToRoot,
   sha256,
+  sha256File,
   stringifyJson,
   validateContent,
   writeTextIfChanged,
 } from './content-lib.mjs';
+import { existsSync } from 'node:fs';
 
 const content = readContent();
 const { errors, summary } = validateContent(content);
@@ -53,6 +58,46 @@ const flutterFiles = {
   'video-audio-mixes.json': stringifyJson(content.videoAudioMixes),
 };
 
+async function mediaFileEntry(filePath, remotePath) {
+  return {
+    path: remotePath,
+    bytes: fileBytes(filePath),
+    sha256: await sha256File(filePath),
+  };
+}
+
+async function buildVideoMediaManifest(videos) {
+  const entries = [];
+  for (const video of videos) {
+    if (video.qualityTier !== 'published') continue;
+    const filePath = resolve(LOCAL_PREMIUM_VIDEO_DIR, `${video.id}.mp4`);
+    if (!existsSync(filePath)) continue;
+    entries.push([
+      video.id,
+      await mediaFileEntry(filePath, `videos/${video.id}.mp4`),
+    ]);
+  }
+  return Object.fromEntries(entries);
+}
+
+async function buildAmbientMediaManifest(ambientTracks) {
+  const entries = [];
+  for (const [trackId, track] of Object.entries(ambientTracks.tracks || {})) {
+    const filePath = resolve(LOCAL_AMBIENT_AUDIO_DIR, track.file);
+    if (!existsSync(filePath)) continue;
+    entries.push([
+      trackId,
+      await mediaFileEntry(filePath, track.file),
+    ]);
+  }
+  return Object.fromEntries(entries);
+}
+
+const mediaManifest = {
+  videos: await buildVideoMediaManifest(content.videos),
+  ambientTracks: await buildAmbientMediaManifest(content.ambientTracks),
+};
+
 const manifest = {
   schemaVersion: content.config.schemaVersion,
   contentVersion: content.config.contentVersion,
@@ -66,6 +111,7 @@ const manifest = {
       },
     ]),
   ),
+  media: mediaManifest,
 };
 
 flutterFiles['content-manifest.json'] = stringifyJson(manifest);

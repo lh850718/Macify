@@ -1,6 +1,6 @@
 <view class="settings-page">
   <view class="header">
-    <text class="title" bindtap="openLicenses">© 呼吸Zen</text>
+    <text class="title" bindtap="openLicenses">© 呆呆角</text>
     <text class="subtitle">安静的呼吸与风景</text>
   </view>
 
@@ -262,6 +262,7 @@
             bindchanging="onCustomTrackVolumeChanging"
             bindchange="onCustomTrackVolumeChange"
           />
+          <text wx:if="{{item.selected}}" class="audio-volume-value">{{item.volumePercent}}%</text>
         </view>
       </view>
     </view>

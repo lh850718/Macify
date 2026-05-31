@@ -2,7 +2,7 @@
 
 module.exports = Object.freeze({
   "schemaVersion": 1,
-  "contentVersion": "premium-free-aerial-1080p-cos-20260514-99",
+  "contentVersion": "premium-free-aerial-1080p-cos-20260531-screened-60",
   "defaultVideoLibrary": "premiumFreeAerial",
   "defaultPremiumFreeAerialVideoBase": "https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-premium",
   "defaultAmbientAudioBase": "https://macify-videos-1430886267.cos.ap-beijing.myqcloud.com/macify-audio"

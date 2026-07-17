@@ -19,7 +19,6 @@
     "pixabay-265271": "assets/media/videos/pixabay-265271.mp4",
     "pixabay-140111": "assets/media/videos/pixabay-140111.mp4",
     "pixabay-6636": "assets/media/videos/pixabay-6636.mp4",
-    "pixabay-159703": "assets/media/videos/pixabay-159703.mp4",
     "pixabay-48596": "assets/media/videos/pixabay-48596.mp4"
   },
   "ambientTracks": {
@@ -34,7 +33,6 @@
     "wind": "assets/media/audio/wind-in-trees.mp3",
     "sky": "assets/media/audio/mountain-sky-ambience.mp3",
     "lightRain": "assets/media/audio/light-rain.mp3",
-    "fire": "assets/media/audio/fire-crackling.mp3",
-    "tractor": "assets/media/audio/tractor-harvesting.mp3"
+    "fire": "assets/media/audio/fire-crackling.mp3"
   }
 }

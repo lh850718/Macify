@@ -52,13 +52,14 @@ class AmbientResolver {
         .map((item) => _hydrateTrack(item, baseOverride))
         .whereType<ResolvedAmbientTrack>()
         .toList(growable: false);
-    if (tracks.isEmpty) return null;
+    final normalizedTracks = _normalizeMixVolumes(tracks);
+    if (normalizedTracks.isEmpty) return null;
 
-    final label = tracks.map((track) => track.label).join(' + ');
-    final id = tracks.length == 1
-        ? tracks.first.id
-        : 'mix:${tracks.map((track) => '${track.id}@${track.volume}').join('+')}';
-    return AmbientMix(id: id, label: label, tracks: tracks);
+    final label = normalizedTracks.map((track) => track.label).join(' + ');
+    final id = normalizedTracks.length == 1
+        ? normalizedTracks.first.id
+        : 'mix:${normalizedTracks.map((track) => '${track.id}@${track.volume}').join('+')}';
+    return AmbientMix(id: id, label: label, tracks: normalizedTracks);
   }
 
   List<CustomAmbientTrackOption> customAmbientTrackOptions() {
@@ -139,9 +140,32 @@ class AmbientResolver {
       label: spec.label?.isNotEmpty == true ? spec.label! : track.label,
       file: track.file,
       durationMs: track.durationMs,
-      volume: spec.volume ?? track.volume,
+      volume: (spec.volume ?? track.volume).clamp(0, 1).toDouble(),
       url: resource.uri,
     );
+  }
+
+  List<ResolvedAmbientTrack> _normalizeMixVolumes(
+    List<ResolvedAmbientTrack> tracks,
+  ) {
+    var maxVolume = 0.0;
+    for (final track in tracks) {
+      maxVolume = maxVolume < track.volume ? track.volume : maxVolume;
+    }
+    if (maxVolume <= 0) return const [];
+    return tracks
+        .map(
+          (track) => ResolvedAmbientTrack(
+            id: track.id,
+            channelId: track.channelId,
+            label: track.label,
+            file: track.file,
+            durationMs: track.durationMs,
+            volume: track.volume / maxVolume,
+            url: track.url,
+          ),
+        )
+        .toList(growable: false);
   }
 
   List<String> _collectTerms(VideoItem video) {

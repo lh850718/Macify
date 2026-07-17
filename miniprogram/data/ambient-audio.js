@@ -59,9 +59,19 @@ function hydrateTrack(spec, base) {
     ...track,
     channelId: track.id,
     label: spec && typeof spec === 'object' && spec.label ? spec.label : track.label,
-    volume,
+    volume: clampMixVolume(volume),
     url: `${base}/${track.file}`,
   };
+}
+
+function normalizeAmbientMixVolumes(tracks) {
+  const source = Array.isArray(tracks) ? tracks : [];
+  const maxVolume = source.reduce((max, track) => Math.max(max, clampMixVolume(track && track.volume)), 0);
+  if (maxVolume <= 0) return [];
+  return source.map((track) => ({
+    ...track,
+    volume: clampMixVolume(track.volume) / maxVolume,
+  }));
 }
 
 function ambientMixFromSpec(spec, options = {}) {
@@ -73,19 +83,20 @@ function ambientMixFromSpec(spec, options = {}) {
   const tracks = specs
     .map((item) => hydrateTrack(item, base))
     .filter(Boolean);
-  if (!tracks.length) return null;
+  const normalizedTracks = normalizeAmbientMixVolumes(tracks);
+  if (!normalizedTracks.length) return null;
 
-  const firstTrack = tracks[0];
-  const label = tracks.map((track) => track.label).join(' + ');
-  const id = tracks.length === 1
+  const firstTrack = normalizedTracks[0];
+  const label = normalizedTracks.map((track) => track.label).join(' + ');
+  const id = normalizedTracks.length === 1
     ? firstTrack.id
-    : `mix:${tracks.map((track) => `${track.id}@${track.volume}`).join('+')}`;
+    : `mix:${normalizedTracks.map((track) => `${track.id}@${track.volume}`).join('+')}`;
 
   return {
     ...firstTrack,
     id,
     label,
-    tracks,
+    tracks: normalizedTracks,
   };
 }
 
@@ -166,5 +177,6 @@ module.exports = {
   ambientMixFromSpec,
   ambientTrackForVideo,
   customAmbientTrackOptions,
+  normalizeAmbientMixVolumes,
   normalizeCustomAmbientMix,
 };

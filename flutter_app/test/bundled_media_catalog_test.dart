@@ -10,8 +10,10 @@ void main() {
 
     final catalog = await loadBundledMediaCatalog(content);
 
-    expect(catalog.bundledVideoAssets, hasLength(20));
-    expect(catalog.bundledAmbientAudioAssets, hasLength(13));
+    expect(catalog.bundledVideoAssets, hasLength(19));
+    expect(catalog.bundledAmbientAudioAssets, hasLength(12));
+    expect(catalog.bundledVideoAssets.keys, isNot(contains('pixabay-159703')));
+    expect(catalog.bundledAmbientAudioAssets.keys, isNot(contains('tractor')));
     expect(
       catalog.bundledVideoAssets['pixabay-339840'],
       'assets/media/videos/pixabay-339840.mp4',

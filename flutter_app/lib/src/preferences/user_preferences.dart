@@ -3,6 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../content/content_models.dart';
 import '../features/breathing/breathing_models.dart';
 
+const zenCueAudioModeBowl = 'bowl';
+const zenCueAudioModeVoice = 'voice';
+
 class UserPreferences {
   const UserPreferences({
     required this.favoriteKeys,
@@ -19,6 +22,8 @@ class UserPreferences {
   static const _rememberZenCuesKey = 'remember-zen-cues-v1';
   static const _zenHapticsKey = 'zen-haptics-v1';
   static const _zenSoundKey = 'zen-sound-v1';
+  static const _zenVoiceCueKey = 'zen-voice-cue-v1';
+  static const _zenCueAudioModeKey = 'zen-cue-audio-mode-v1';
   static const _cityKey = 'weather-city-v1';
   static const _temperatureUnitKey = 'temperature-unit-v1';
   static const _ambientAudioModeKey = 'ambient-audio-mode-v1';
@@ -39,6 +44,19 @@ class UserPreferences {
 
   static Future<UserPreferences> load() async {
     final prefs = await SharedPreferences.getInstance();
+    final storedZenSound = prefs.getBool(_zenSoundKey) ?? false;
+    final legacyCueMode = normalizeZenCueAudioMode(
+      prefs.getString(_zenCueAudioModeKey),
+    );
+    final hasVoiceCuePreference = prefs.containsKey(_zenVoiceCueKey);
+    final zenSound = hasVoiceCuePreference
+        ? storedZenSound
+        : legacyCueMode == zenCueAudioModeVoice
+        ? false
+        : storedZenSound;
+    final zenVoiceCue = hasVoiceCuePreference
+        ? prefs.getBool(_zenVoiceCueKey) ?? false
+        : legacyCueMode == zenCueAudioModeVoice && storedZenSound;
     return UserPreferences(
       favoriteKeys: (prefs.getStringList(_favoriteKeysKey) ?? const []).toSet(),
       shuffleScope: prefs.getString(_shuffleScopeKey) ?? 'all',
@@ -49,7 +67,8 @@ class UserPreferences {
         showVideoMeta: prefs.getBool(_showVideoMetaKey) ?? true,
         rememberZenCues: prefs.getBool(_rememberZenCuesKey) ?? false,
         zenHaptics: prefs.getBool(_zenHapticsKey) ?? false,
-        zenSound: prefs.getBool(_zenSoundKey) ?? false,
+        zenSound: zenSound,
+        zenVoiceCue: zenVoiceCue,
         city: prefs.getString(_cityKey) ?? '北京',
         temperatureUnit: prefs.getString(_temperatureUnitKey) ?? 'celsius',
         ambientAudioMode: prefs.getString(_ambientAudioModeKey) ?? 'video',
@@ -148,6 +167,7 @@ class UserPreferences {
       prefs.setBool(_rememberZenCuesKey, settings.rememberZenCues),
       prefs.setBool(_zenHapticsKey, settings.zenHaptics),
       prefs.setBool(_zenSoundKey, settings.zenSound),
+      prefs.setBool(_zenVoiceCueKey, settings.zenVoiceCue),
       prefs.setString(_cityKey, settings.city),
       prefs.setString(_temperatureUnitKey, settings.temperatureUnit),
       prefs.setString(_ambientAudioModeKey, settings.ambientAudioMode),
@@ -201,6 +221,7 @@ class AppSettings {
     required this.rememberZenCues,
     required this.zenHaptics,
     required this.zenSound,
+    required this.zenVoiceCue,
     required this.city,
     required this.temperatureUnit,
     required this.ambientAudioMode,
@@ -217,6 +238,7 @@ class AppSettings {
       rememberZenCues = false,
       zenHaptics = false,
       zenSound = false,
+      zenVoiceCue = false,
       city = '北京',
       temperatureUnit = 'celsius',
       ambientAudioMode = 'video',
@@ -231,6 +253,7 @@ class AppSettings {
   final bool rememberZenCues;
   final bool zenHaptics;
   final bool zenSound;
+  final bool zenVoiceCue;
   final String city;
   final String temperatureUnit;
   final String ambientAudioMode;
@@ -246,6 +269,7 @@ class AppSettings {
     bool? rememberZenCues,
     bool? zenHaptics,
     bool? zenSound,
+    bool? zenVoiceCue,
     String? city,
     String? temperatureUnit,
     String? ambientAudioMode,
@@ -261,6 +285,7 @@ class AppSettings {
       rememberZenCues: rememberZenCues ?? this.rememberZenCues,
       zenHaptics: zenHaptics ?? this.zenHaptics,
       zenSound: zenSound ?? this.zenSound,
+      zenVoiceCue: zenVoiceCue ?? this.zenVoiceCue,
       city: city ?? this.city,
       temperatureUnit: temperatureUnit ?? this.temperatureUnit,
       ambientAudioMode: ambientAudioMode ?? this.ambientAudioMode,
@@ -269,6 +294,12 @@ class AppSettings {
       customBreathRhythm: customBreathRhythm ?? this.customBreathRhythm,
     );
   }
+}
+
+String normalizeZenCueAudioMode(String? value) {
+  return value == zenCueAudioModeVoice
+      ? zenCueAudioModeVoice
+      : zenCueAudioModeBowl;
 }
 
 List<CustomAmbientSetting> _customAmbientMixPreference(List<String> raw) {

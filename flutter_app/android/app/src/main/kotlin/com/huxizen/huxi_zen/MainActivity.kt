@@ -35,6 +35,7 @@ class MainActivity : FlutterActivity() {
                 "stop" -> result.success(stopBackgroundAudio())
                 "startHapticPattern" -> result.success(startHapticPattern(call.arguments))
                 "stopHaptics" -> result.success(stopBackgroundHaptics())
+                "playCompletionHaptic" -> result.success(playCompletionHaptic())
                 "status" -> result.success(backgroundAudioStatus())
                 else -> result.notImplemented()
             }
@@ -163,6 +164,29 @@ class MainActivity : FlutterActivity() {
             } else {
                 @Suppress("DEPRECATION")
                 vibrator.vibrate(45)
+            }
+            true
+        } catch (_: SecurityException) {
+            false
+        }
+    }
+
+    private fun playCompletionHaptic(): Boolean {
+        val vibrator = vibrator() ?: return false
+        if (!hasPermission(Manifest.permission.VIBRATE) || !vibrator.hasVibrator()) return false
+
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(
+                    VibrationEffect.createWaveform(
+                        longArrayOf(0, 380, 220, 380),
+                        intArrayOf(0, 255, 0, 255),
+                        -1,
+                    ),
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(longArrayOf(0, 380, 220, 380), -1)
             }
             true
         } catch (_: SecurityException) {

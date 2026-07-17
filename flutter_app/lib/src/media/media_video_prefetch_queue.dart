@@ -19,16 +19,20 @@ class MediaVideoPrefetchQueue {
     required this.client,
     required MediaCacheIndex initialIndex,
     this.bundledCatalog = const MediaResourceCatalog.empty(),
+    this.videoCacheBudgetBytes = defaultVideoCacheBudgetBytes,
     MediaCacheIndexPersist? persistIndex,
     this.onIndexChanged,
     this.readIndex,
   }) : index = initialIndex,
        _persistIndex = persistIndex ?? ((index) => index.save());
 
+  static const defaultVideoCacheBudgetBytes = 1024 * 1024 * 1024;
+
   final ContentBundle content;
   final Directory cacheRoot;
   final RemoteFileClient client;
   final MediaResourceCatalog bundledCatalog;
+  final int videoCacheBudgetBytes;
   final MediaCacheIndexPersist _persistIndex;
   final MediaCacheIndexChanged? onIndexChanged;
   final MediaCacheIndexRead? readIndex;
@@ -62,6 +66,16 @@ class MediaVideoPrefetchQueue {
     if (_downloadInFlight) return null;
 
     index = readIndex?.call() ?? index;
+    final cachedBytes = _cachedVideoBytes();
+    if (cachedBytes >= videoCacheBudgetBytes) {
+      lastDecision = const MediaPrefetchDecision.blocked(
+        reason: MediaPrefetchBlockReason.cacheBudgetFull,
+        remainingLocalVideoIds: {},
+      );
+      lastError = null;
+      return null;
+    }
+
     final policy = MediaPrefetchPolicy(_resolver);
     final decision = policy.nextVideoToDownload(
       playbackScope: playbackScope,
@@ -74,9 +88,19 @@ class MediaVideoPrefetchQueue {
     final video = decision.video;
     if (video == null) return null;
 
+    final mediaFile = content.manifest.media.videos[video.id];
+    if (mediaFile != null &&
+        cachedBytes > 0 &&
+        cachedBytes + mediaFile.bytes > videoCacheBudgetBytes) {
+      lastDecision = const MediaPrefetchDecision.blocked(
+        reason: MediaPrefetchBlockReason.cacheBudgetFull,
+        remainingLocalVideoIds: {},
+      );
+      return null;
+    }
+
     _downloadInFlight = true;
     try {
-      final mediaFile = content.manifest.media.videos[video.id];
       final result =
           await MediaDownloadService(
             content: content,
@@ -113,5 +137,23 @@ class MediaVideoPrefetchQueue {
       content,
       catalog: index.toResourceCatalog(bundled: bundledCatalog),
     );
+  }
+
+  int _cachedVideoBytes() {
+    var total = 0;
+    for (final entry in index.cachedVideoFiles.entries) {
+      final manifestBytes = content.manifest.media.videos[entry.key]?.bytes;
+      if (manifestBytes != null) {
+        total += manifestBytes;
+        continue;
+      }
+      try {
+        final file = File(entry.value);
+        if (file.existsSync()) total += file.lengthSync();
+      } catch (_) {
+        // Missing files are pruned on startup; ignore transient filesystem issues.
+      }
+    }
+    return total;
   }
 }

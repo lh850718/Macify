@@ -4,9 +4,8 @@ import 'media_resource_resolver.dart';
 enum MediaPrefetchBlockReason {
   ready,
   emptyScope,
-  noLocalCycle,
-  localCycleIncomplete,
   noRemoteCandidates,
+  cacheBudgetFull,
 }
 
 class MediaPrefetchDecision {
@@ -71,23 +70,9 @@ class MediaPrefetchPolicy {
       }
     }
 
-    if (localVideoIds.isEmpty) {
-      return const MediaPrefetchDecision.blocked(
-        reason: MediaPrefetchBlockReason.noLocalCycle,
-        remainingLocalVideoIds: {},
-      );
-    }
-
     final remainingLocalVideoIds = localVideoIds
         .where((id) => !playedVideoIds.contains(id))
         .toSet();
-    if (remainingLocalVideoIds.isNotEmpty) {
-      return MediaPrefetchDecision.blocked(
-        reason: MediaPrefetchBlockReason.localCycleIncomplete,
-        remainingLocalVideoIds: remainingLocalVideoIds,
-      );
-    }
-
     if (remoteCandidates.isEmpty) {
       return MediaPrefetchDecision.blocked(
         reason: MediaPrefetchBlockReason.noRemoteCandidates,

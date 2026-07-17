@@ -11,10 +11,19 @@ void main() {
 
     expect(content.config.defaultVideoLibrary, 'premiumFreeAerial');
     expect(content.manifest.contentVersion, content.config.contentVersion);
-    expect(content.publishedVideos, hasLength(60));
+    expect(content.publishedVideos, hasLength(43));
     expect(content.ambientCatalog.tracks.keys, contains('sky'));
-    expect(content.manifest.media.videos, hasLength(60));
-    expect(content.manifest.media.ambientTracks, hasLength(13));
+    expect(content.ambientCatalog.tracks.keys, isNot(contains('tractor')));
+    expect(content.manifest.media.videos, hasLength(43));
+    expect(content.manifest.media.ambientTracks, hasLength(12));
+    expect(
+      content.manifest.media.videos.keys,
+      isNot(contains('pixabay-232561')),
+    );
+    expect(
+      content.manifest.media.ambientTracks.keys,
+      isNot(contains('tractor')),
+    );
     expect(
       content.manifest.media.videos['pixabay-28707']?.path,
       'videos/pixabay-28707.mp4',
@@ -44,7 +53,7 @@ void main() {
 
     expect(mix?.label, '海浪海鸥 + 风声');
     expect(mix?.tracks.map((track) => track.channelId), ['oceanGulls', 'wind']);
-    expect(mix?.tracks.map((track) => track.volume), [0.64, 0.2]);
+    expect(mix?.tracks.map((track) => track.volume), [1, 0.3125]);
   });
 
   test('omits videos deleted by manual screening', () async {

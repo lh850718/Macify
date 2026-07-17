@@ -90,13 +90,6 @@ module.exports = Object.freeze({
       "file": "fire-crackling.mp3",
       "durationMs": 79536,
       "volume": 0.3
-    },
-    "tractor": {
-      "id": "tractor",
-      "label": "收割机",
-      "file": "tractor-harvesting.mp3",
-      "durationMs": 249731,
-      "volume": 0.36
     }
   },
   "CUSTOM_AMBIENT_TRACK_IDS": [

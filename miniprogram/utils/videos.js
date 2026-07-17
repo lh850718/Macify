@@ -55,7 +55,11 @@ function liteBaseForSettings(settings) {
 function liteUrlFor(video, settings) {
   const base = liteBaseForSettings(settings);
   if (!base) return '';
-  return `${base}/videos/${video.id}.mp4`;
+  const sourceVersion = settings && settings.premiumFreeAerialSourceVersion
+    ? encodeURIComponent(settings.premiumFreeAerialSourceVersion)
+    : '';
+  const versionQuery = sourceVersion ? `?v=${sourceVersion}` : '';
+  return `${base}/videos/${video.id}.mp4${versionQuery}`;
 }
 
 function videoUrlFor(video, settings) {

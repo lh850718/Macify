@@ -6,7 +6,10 @@ const {
 } = require('../../utils/storage.js');
 const { pickQuote } = require('../../utils/quotes.js');
 const { shuffledVideoQueue, videoById } = require('../../utils/videos.js');
-const { cachedVideoForSettings, cacheVideo } = require('../../utils/video-cache.js');
+const {
+  cachedVideoForSettings,
+  removeCachedVideo,
+} = require('../../utils/video-cache.js');
 const { getForecast, describeWeather } = require('../../utils/weather.js');
 const {
   AMBIENT_AUDIO_MODES,
@@ -28,7 +31,16 @@ const BREATH_PHASE_LABELS = Object.freeze({
 });
 const HAPTIC_LEAD_MS = 850;
 const ZEN_AUDIO_SOURCE = '/assets/breath.mp3';
-const ZEN_AUDIO_VOLUME = 0.55;
+const ZEN_VOICE_AUDIO_SOURCES = Object.freeze({
+  inhale: '/assets/voice-inhale.m4a',
+  holdAfterInhale: '/assets/voice-hold.m4a',
+  exhale: '/assets/voice-exhale.m4a',
+  holdAfterExhale: '/assets/voice-hold.m4a',
+});
+const ZEN_VOICE_PRACTICE_START_SOURCE = '/assets/voice-practice-start.m4a';
+const ZEN_VOICE_PRACTICE_COMPLETE_SOURCE = '/assets/voice-practice-complete.m4a';
+const ZEN_AUDIO_VOLUME = 1;
+const ZEN_VOICE_AUDIO_VOLUME = 1;
 const ZEN_AUDIO_FALLBACK_DURATION_MS = 63384;
 const ZEN_AUDIO_CROSSFADE_MS = 2200;
 const ZEN_AUDIO_FADE_STEP_MS = 100;
@@ -93,6 +105,21 @@ function vibrateShort(type) {
   }
 }
 
+function vibrateLong() {
+  const fallback = () => vibrateShort('heavy');
+  if (!wx.vibrateLong) {
+    fallback();
+    return;
+  }
+  try {
+    wx.vibrateLong({
+      fail: fallback,
+    });
+  } catch (error) {
+    fallback();
+  }
+}
+
 function clampVolume(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return 0;
@@ -132,6 +159,14 @@ function createManagedAudio(src, volume, label) {
 
 function createZenAudio(src, volume) {
   return createManagedAudio(src, volume, 'Zen cue');
+}
+
+function usesZenVoiceCue(settings) {
+  return !!(settings && settings.zenVoiceCue);
+}
+
+function zenVoiceSourceForPhase(phase) {
+  return ZEN_VOICE_AUDIO_SOURCES[phase] || '';
 }
 
 function createAmbientAudio(src, volume) {
@@ -570,7 +605,6 @@ Page({
       videoError: next && next.warning ? next.warning : '',
     };
     const afterVideoSet = () => {
-      if (next && !options.skipCache) this.cacheCurrentVideo(next);
       if (this.data.ambientSoundOn) this.syncAmbientAudioForCurrentVideo();
     };
 
@@ -743,7 +777,22 @@ Page({
       : this.data.activeVideoSlot || 'a';
     if (slot !== this.data.activeVideoSlot && slot !== this.data.incomingVideoSlot) return;
     if (this.data.incomingVideoSlot && slot === this.data.activeVideoSlot) return;
-    const failedVideo = this.videoForSlot(slot) || this.data.currentVideo;
+    let failedVideo = this.videoForSlot(slot) || this.data.currentVideo;
+
+    let recoveredFromCachedFile = false;
+    if (failedVideo && failedVideo.cached) {
+      const settings = this.data.settings && this.data.settings.city ? this.data.settings : getSettings();
+      removeCachedVideo(settings, failedVideo);
+      if (failedVideo.fallbackUrl) {
+        recoveredFromCachedFile = true;
+        failedVideo = {
+          ...failedVideo,
+          url: failedVideo.fallbackUrl,
+          fallbackUrl: '',
+          cached: false,
+        };
+      }
+    }
 
     if (failedVideo && failedVideo.fallbackUrl && !this.data.videoFallbackUsed) {
       const fallbackVideo = {
@@ -758,6 +807,18 @@ Page({
         videoReady: slot === this.data.activeVideoSlot ? false : this.data.videoReady,
         videoFallbackUsed: true,
         videoError: '背景视频加载失败，正在尝试源站回退',
+      });
+      return;
+    }
+
+    if (recoveredFromCachedFile && failedVideo && !failedVideo.cached && failedVideo.url) {
+      this.setData({
+        currentVideo: failedVideo,
+        [slotVideoKey(slot)]: failedVideo,
+        [slotReadyKey(slot)]: false,
+        videoReady: slot === this.data.activeVideoSlot ? false : this.data.videoReady,
+        videoFallbackUsed: true,
+        videoError: '本地缓存失效，正在重新播放远端视频',
       });
       return;
     }
@@ -858,7 +919,9 @@ Page({
       && this.playbackIndex < this.playbackSequence.length - 1
     ) {
       this.playbackIndex += 1;
-      this.setCurrentVideo(this.playbackSequence[this.playbackIndex]);
+      const settings = this.data.settings && this.data.settings.city ? this.data.settings : getSettings();
+      const video = this.playbackSequence[this.playbackIndex];
+      this.setCurrentVideo(this.cachedVersionOf(settings, video) || video);
       return;
     }
 
@@ -886,7 +949,9 @@ Page({
       return;
     }
     this.playbackIndex -= 1;
-    this.setCurrentVideo(this.playbackSequence[this.playbackIndex]);
+    const settings = this.data.settings && this.data.settings.city ? this.data.settings : getSettings();
+    const video = this.playbackSequence[this.playbackIndex];
+    this.setCurrentVideo(this.cachedVersionOf(settings, video) || video);
   },
 
   rememberPlaybackVideo(video) {
@@ -943,26 +1008,6 @@ Page({
     }
     this.videoCacheDownloadTask = null;
     this.videoCacheToken = '';
-  },
-
-  cacheCurrentVideo(video) {
-    const settings = this.data.settings && this.data.settings.city ? this.data.settings : getSettings();
-    this.abortVideoCacheDownload();
-
-    const token = `${video.videoLibrary || 'premiumFreeAerial'}:${video.id}:${Date.now()}`;
-    this.videoCacheToken = token;
-    this.videoCacheDownloadTask = cacheVideo(settings, video, {
-      success: (meta) => {
-        if (this.videoCacheToken !== token) return;
-        const current = this.data.currentVideo;
-        if (!current || current.id !== video.id || current.videoLibrary !== meta.videoLibrary) return;
-        // Keep the active src stable; swapping to the cached file restarts WeChat video playback.
-        this.videoCacheDownloadTask = null;
-      },
-      fail: (error) => {
-        console.warn('Video cache download failed:', error);
-      },
-    });
   },
 
   nextQuote() {
@@ -1577,7 +1622,9 @@ Page({
 
   toggleZenHaptics() {
     const settings = setSetting('zenHaptics', !this.data.settings.zenHaptics);
-    this.setData({ settings });
+    this.setData({
+      settings,
+    });
     if (settings.zenHaptics) {
       this.showZenHint('需要打开手机振动功能');
       const rhythm = this.currentBreathRhythm();
@@ -1595,12 +1642,24 @@ Page({
 
   toggleZenSound() {
     const settings = setSetting('zenSound', !this.data.settings.zenSound);
-    this.setData({ settings });
+    this.setData({
+      settings,
+    });
     if (settings.zenSound) {
       this.playZenSound();
     } else {
-      this.stopZenAudio();
+      this.stopZenBowlAudio();
     }
+  },
+
+  toggleZenVoiceCue() {
+    const settings = setSetting('zenVoiceCue', !this.data.settings.zenVoiceCue);
+    this.setData({ settings });
+    if (!settings.zenVoiceCue) {
+      this.stopZenVoiceAudio();
+      return;
+    }
+    if (this.zenPhase) this.playZenPhaseAudio(this.zenPhase);
   },
 
   startCustomBreath() {
@@ -1615,6 +1674,7 @@ Page({
     this.zenCustomTargetCycles = Math.max(1, Number(rhythm.cycles) || 1);
     this.zenCustomIntroActive = true;
     this.zenHapticLeadArmed = false;
+    this.playZenPracticeVoiceCue(ZEN_VOICE_PRACTICE_START_SOURCE);
     this.setData({
       zenBreathMode: 'custom',
       zenPhaseText: '',
@@ -1643,7 +1703,8 @@ Page({
       zenPhaseEntering: false,
       zenPracticeText: '本次练习完成，恢复默认呼吸',
     });
-    this.playBubblePopHaptic();
+    this.playZenPracticeVoiceCue(ZEN_VOICE_PRACTICE_COMPLETE_SOURCE);
+    this.playPracticeCompleteHaptic();
     this.runBreathCompletionAnimation(() => {
       this.zenBreathMode = 'default';
       this.zenCustomCycleIndex = 0;
@@ -1682,6 +1743,18 @@ Page({
         vibrateShort('light');
       }
     }, 80);
+  },
+
+  playPracticeCompleteHaptic() {
+    if (!this.data.settings || !this.data.settings.zenHaptics) return;
+    this.zenHapticTimers = this.zenHapticTimers || [];
+    vibrateLong();
+    const secondPulseTimer = setTimeout(() => {
+      if (this.data.zenActive && this.data.settings && this.data.settings.zenHaptics) {
+        vibrateLong();
+      }
+    }, 620);
+    this.zenHapticTimers.push(secondPulseTimer);
   },
 
   startCustomBreathCountdown() {
@@ -1729,6 +1802,7 @@ Page({
     this.clearZenHapticTimers();
     this.clearZenPracticeTimer();
     this.clearZenCountdownTimers();
+    this.stopZenAudio();
     this.zenBreathMode = 'default';
     this.zenCustomCycleIndex = 0;
     this.zenCustomTargetCycles = 0;
@@ -1936,6 +2010,7 @@ Page({
     }
 
     this.zenPhase = phase;
+    this.playZenPhaseAudio(phase);
     const durationMs = rhythmPhaseMs(rhythm, phase);
     const inhaleMs = rhythmPhaseMs(rhythm, 'inhale');
     const nextPhase = nextBreathPhase(phase, rhythm);
@@ -1997,19 +2072,64 @@ Page({
   },
 
   playZenSound() {
-    this.stopZenAudio();
+    this.stopZenBowlAudio();
     const audio = this.startZenAudioTrack(ZEN_AUDIO_VOLUME);
     if (!audio) return;
     this.zenAudioCurrent = audio;
     this.scheduleZenAudioCrossfade(audio);
   },
 
+  playZenPhaseAudio(phase) {
+    const src = zenVoiceSourceForPhase(phase);
+    if (!src) return;
+    this.playZenPracticeVoiceCue(src);
+  },
+
+  playZenPracticeVoiceCue(src) {
+    if (!this.data.zenActive || !usesZenVoiceCue(this.data.settings)) return;
+    if (!src) return;
+
+    this.stopZenVoiceAudio();
+
+    const audio = createZenAudio(src, ZEN_VOICE_AUDIO_VOLUME);
+    if (!audio) return;
+    audio.__zenVoiceCue = true;
+    this.zenVoiceAudioPlayers = this.zenVoiceAudioPlayers || [];
+    this.zenVoiceAudioPlayers.push(audio);
+
+    if (audio.onEnded) {
+      audio.onEnded(() => {
+        if (!(this.zenVoiceAudioPlayers || []).includes(audio)) return;
+        this.destroyZenVoiceAudio(audio);
+      });
+    }
+
+    try {
+      if (audio.seek) audio.seek(0);
+      audio.play();
+    } catch (error) {
+      console.warn('Zen voice cue playback failed:', error);
+      this.destroyZenVoiceAudio(audio);
+    }
+  },
+
   stopZenAudio() {
+    this.stopZenBowlAudio();
+    this.stopZenVoiceAudio();
+  },
+
+  stopZenBowlAudio() {
     this.clearZenAudioTimers();
     const players = this.zenAudioPlayers || [];
     players.forEach((audio) => this.destroyZenAudio(audio));
     this.zenAudioPlayers = [];
     this.zenAudioCurrent = null;
+  },
+
+  stopZenVoiceAudio() {
+    const players = this.zenVoiceAudioPlayers || [];
+    players.forEach((audio) => this.destroyZenVoiceAudio(audio));
+    this.zenVoiceAudioPlayers = [];
   },
 
   startZenAudioTrack(volume) {
@@ -2121,6 +2241,17 @@ Page({
       console.warn('Zen cue audio cleanup failed:', error);
     }
     this.zenAudioPlayers = (this.zenAudioPlayers || []).filter((item) => item !== audio);
+  },
+
+  destroyZenVoiceAudio(audio) {
+    if (!audio) return;
+    try {
+      audio.stop();
+      audio.destroy();
+    } catch (error) {
+      console.warn('Zen voice audio cleanup failed:', error);
+    }
+    this.zenVoiceAudioPlayers = (this.zenVoiceAudioPlayers || []).filter((item) => item !== audio);
   },
 
   onVideoEnded(event) {

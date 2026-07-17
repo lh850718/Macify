@@ -26,34 +26,6 @@ module.exports = Object.freeze([
     "notes": "岩岸海浪：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-344380",
-    "mix": [
-      {
-        "trackId": "ocean",
-        "volume": 0.5
-      }
-    ],
-    "notes": "蓝海航岸：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-76681",
-    "mix": [
-      {
-        "trackId": "wind",
-        "volume": 0.31
-      },
-      {
-        "trackId": "waterfall",
-        "volume": 1
-      },
-      {
-        "trackId": "ocean",
-        "volume": 0.21
-      }
-    ],
-    "notes": "岩瀑白浪：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
     "videoId": "pixabay-339840",
     "mix": [
       {
@@ -110,24 +82,6 @@ module.exports = Object.freeze([
     "notes": "冬河森林：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-181376",
-    "mix": [
-      {
-        "trackId": "wind",
-        "volume": 0.12
-      },
-      {
-        "trackId": "river",
-        "volume": 0.02
-      },
-      {
-        "trackId": "forestWindBirds",
-        "volume": 0.37
-      }
-    ],
-    "notes": "木舟渔人：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
     "videoId": "pixabay-338904",
     "mix": [
       {
@@ -142,30 +96,6 @@ module.exports = Object.freeze([
     "notes": "浅滩海纹：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-305657",
-    "mix": [
-      {
-        "trackId": "forestWindBirds",
-        "volume": 0.54
-      }
-    ],
-    "notes": "阿尔卑斯山径：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-306155",
-    "mix": [
-      {
-        "trackId": "oceanGulls",
-        "volume": 0.52
-      },
-      {
-        "trackId": "wind",
-        "volume": 0.12
-      }
-    ],
-    "notes": "静海红日：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
     "videoId": "pixabay-258799",
     "mix": [
       {
@@ -178,20 +108,6 @@ module.exports = Object.freeze([
       }
     ],
     "notes": "冬晨雾林：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-293788",
-    "mix": [
-      {
-        "trackId": "oceanGulls",
-        "volume": 0.49
-      },
-      {
-        "trackId": "wind",
-        "volume": 0.19
-      }
-    ],
-    "notes": "碧岛航岸：手工筛选备选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-287510",
@@ -216,20 +132,6 @@ module.exports = Object.freeze([
       }
     ],
     "notes": "梦海缓波：手工筛选必选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-283431",
-    "mix": [
-      {
-        "trackId": "sky",
-        "volume": 0.5
-      },
-      {
-        "trackId": "forestWindBirds",
-        "volume": 0.03
-      }
-    ],
-    "notes": "山田星田：手工筛选备选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-275983",
@@ -302,20 +204,6 @@ module.exports = Object.freeze([
       }
     ],
     "notes": "椰影海湾：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-260397",
-    "mix": [
-      {
-        "trackId": "wind",
-        "volume": 0.54
-      },
-      {
-        "trackId": "forestWindBirds",
-        "volume": 0.13
-      }
-    ],
-    "notes": "瑞士雾海：手工筛选备选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-214409",
@@ -470,20 +358,6 @@ module.exports = Object.freeze([
     "notes": "晨浪金光：手工筛选必选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-24216",
-    "mix": [
-      {
-        "trackId": "ocean",
-        "volume": 0.5
-      },
-      {
-        "trackId": "wind",
-        "volume": 0.12
-      }
-    ],
-    "notes": "蓝岸斜浪：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
     "videoId": "pixabay-4006",
     "mix": [
       {
@@ -512,44 +386,6 @@ module.exports = Object.freeze([
     "notes": "夜营火光：手工筛选必选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-307864",
-    "mix": [
-      {
-        "trackId": "wind",
-        "volume": 0.3
-      },
-      {
-        "trackId": "sky",
-        "volume": 0.22
-      }
-    ],
-    "notes": "稻田风机：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-232561",
-    "mix": [
-      {
-        "trackId": "tractor",
-        "volume": 0.5
-      }
-    ],
-    "notes": "麦田收割：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-148594",
-    "mix": [
-      {
-        "trackId": "fire",
-        "volume": 0.47
-      },
-      {
-        "trackId": "wind",
-        "volume": 0.17
-      }
-    ],
-    "notes": "营火煮茶：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
     "videoId": "pixabay-190776",
     "mix": [
       {
@@ -576,34 +412,6 @@ module.exports = Object.freeze([
       }
     ],
     "notes": "雨窗流滴：手工筛选必选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-67358",
-    "mix": [
-      {
-        "trackId": "sky",
-        "volume": 0.25
-      },
-      {
-        "trackId": "underwater",
-        "volume": 0.68
-      }
-    ],
-    "notes": "墨云入水：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-64630",
-    "mix": [
-      {
-        "trackId": "sky",
-        "volume": 0.25
-      },
-      {
-        "trackId": "underwater",
-        "volume": 0.68
-      }
-    ],
-    "notes": "彩墨云生：手工筛选备选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-333600",
@@ -698,16 +506,6 @@ module.exports = Object.freeze([
     "notes": "晨雾露草：手工筛选备选，环境音按筛选表设置。"
   },
   {
-    "videoId": "pixabay-213616",
-    "mix": [
-      {
-        "trackId": "underwater",
-        "volume": 0.55
-      }
-    ],
-    "notes": "蓝幕水母：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
     "videoId": "pixabay-16166",
     "mix": [
       {
@@ -748,20 +546,6 @@ module.exports = Object.freeze([
       }
     ],
     "notes": "海龟慢游：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-242125",
-    "mix": [
-      {
-        "trackId": "underwater",
-        "volume": 0.55
-      },
-      {
-        "trackId": "wind",
-        "volume": 0.03
-      }
-    ],
-    "notes": "水母成群：手工筛选备选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-127713",
@@ -814,16 +598,6 @@ module.exports = Object.freeze([
       }
     ],
     "notes": "水下光束：手工筛选备选，环境音按筛选表设置。"
-  },
-  {
-    "videoId": "pixabay-159703",
-    "mix": [
-      {
-        "trackId": "river",
-        "volume": 0.52
-      }
-    ],
-    "notes": "雪河气泡：手工筛选必选，环境音按筛选表设置。"
   },
   {
     "videoId": "pixabay-83059",

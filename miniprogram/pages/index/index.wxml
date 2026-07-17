@@ -125,6 +125,10 @@
         bindtap="toggleZenSound"
       >颂钵音</view>
       <view
+        class="zen-cue {{settings.zenVoiceCue ? 'zen-cue-active' : ''}}"
+        bindtap="toggleZenVoiceCue"
+      >人声提示</view>
+      <view
         class="zen-cue {{zenBreathMode === 'custom' ? 'zen-cue-active' : ''}}"
         bindtap="startCustomBreath"
       >自定义练习</view>

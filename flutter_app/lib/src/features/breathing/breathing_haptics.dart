@@ -47,4 +47,12 @@ class BreathingHapticController {
       return false;
     }
   }
+
+  Future<bool> playCompletion() async {
+    try {
+      return await bridge.playCompletionHaptic();
+    } on MissingPluginException {
+      return false;
+    }
+  }
 }

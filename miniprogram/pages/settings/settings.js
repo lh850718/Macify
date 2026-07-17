@@ -1,4 +1,7 @@
-const { getSettings, saveSettings } = require('../../utils/storage.js');
+const {
+  getSettings,
+  saveSettings,
+} = require('../../utils/storage.js');
 const {
   activeVideoLibrary,
   categoryLabel,

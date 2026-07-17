@@ -23,6 +23,10 @@ const DEFAULT_CUSTOM_BREATH_RHYTHM = Object.freeze({
   holdAfterExhale: 0,
   cycles: 8,
 });
+const ZEN_CUE_AUDIO_MODES = Object.freeze({
+  BOWL: 'bowl',
+  VOICE: 'voice',
+});
 const PUBLIC_SHUFFLE_SCOPES = Object.freeze([
   'all',
   'favorites',
@@ -49,6 +53,8 @@ const DEFAULT_SETTINGS = Object.freeze({
   customAmbientMix: [],
   zenHaptics: false,
   zenSound: false,
+  zenVoiceCue: false,
+  zenCueAudioMode: ZEN_CUE_AUDIO_MODES.BOWL,
   rememberZenCues: false,
   defaultBreathRhythm: DEFAULT_BREATH_RHYTHM,
   customBreathRhythm: DEFAULT_CUSTOM_BREATH_RHYTHM,
@@ -124,6 +130,20 @@ function normalizeSettings(raw) {
     settings.ambientAudioMode = AMBIENT_AUDIO_MODES.VIDEO;
   }
   settings.customAmbientMix = normalizeCustomAmbientMix(settings.customAmbientMix);
+  if (!Object.keys(ZEN_CUE_AUDIO_MODES).some((key) => ZEN_CUE_AUDIO_MODES[key] === settings.zenCueAudioMode)) {
+    settings.zenCueAudioMode = ZEN_CUE_AUDIO_MODES.BOWL;
+  }
+  if (!raw || !Object.prototype.hasOwnProperty.call(raw, 'zenVoiceCue')) {
+    settings.zenVoiceCue = settings.zenCueAudioMode === ZEN_CUE_AUDIO_MODES.VOICE
+      && !!settings.zenSound;
+    if (settings.zenCueAudioMode === ZEN_CUE_AUDIO_MODES.VOICE) {
+      settings.zenSound = false;
+    }
+  } else {
+    settings.zenVoiceCue = !!settings.zenVoiceCue;
+  }
+  settings.zenSound = !!settings.zenSound;
+  settings.zenHaptics = !!settings.zenHaptics;
   settings.defaultBreathRhythm = normalizeBreathRhythm(
     settings.defaultBreathRhythm,
     DEFAULT_BREATH_RHYTHM,
@@ -154,22 +174,27 @@ function setSetting(key, value) {
 
 function resetZenCuesForEntry() {
   const settings = getSettings();
-  if (settings.rememberZenCues || (!settings.zenHaptics && !settings.zenSound)) {
+  if (
+    settings.rememberZenCues
+    || (!settings.zenHaptics && !settings.zenSound && !settings.zenVoiceCue)
+  ) {
     return settings;
   }
   return saveSettings({
     ...settings,
     zenHaptics: false,
     zenSound: false,
+    zenVoiceCue: false,
   });
 }
 
 function resetZenSoundForForeground() {
   const settings = getSettings();
-  if (!settings.zenSound) return settings;
+  if (!settings.zenSound && !settings.zenVoiceCue) return settings;
   return saveSettings({
     ...settings,
     zenSound: false,
+    zenVoiceCue: false,
   });
 }
 
@@ -236,6 +261,7 @@ module.exports = {
   DEFAULT_SETTINGS,
   DEFAULT_BREATH_RHYTHM,
   DEFAULT_CUSTOM_BREATH_RHYTHM,
+  ZEN_CUE_AUDIO_MODES,
   DEFAULT_PREMIUM_FREE_AERIAL_VIDEO_BASE,
   DEFAULT_VIDEO_LIBRARY,
   PREMIUM_FREE_AERIAL_SOURCE_VERSION,

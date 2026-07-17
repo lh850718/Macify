@@ -10,12 +10,21 @@ import 'breathing_haptics.dart';
 import 'breathing_models.dart';
 
 const _breathSoundAsset = 'assets/media/audio/breath.mp3';
+const _voiceInhaleAsset = 'assets/media/audio/voice-inhale.m4a';
+const _voiceExhaleAsset = 'assets/media/audio/voice-exhale.m4a';
+const _voiceHoldAsset = 'assets/media/audio/voice-hold.m4a';
+const _voicePracticeStartAsset = 'assets/media/audio/voice-practice-start.m4a';
+const _voicePracticeCompleteAsset =
+    'assets/media/audio/voice-practice-complete.m4a';
 const _breathScaleMin = 0.45;
 const _breathScaleMax = 1.2;
 const _breathHoldOpacity = 0.76;
 const _breathEntryDuration = Duration(milliseconds: 760);
 const _breathCompletionDuration = Duration(milliseconds: 3000);
 const _breathCurve = Cubic(0.45, 0, 0.55, 1);
+const _zenTextFontFamily = 'PingFang SC';
+const _zenTextFontFallback = ['SF Pro Text', 'Heiti SC', 'Noto Sans CJK SC'];
+const _zenNumberFontFallback = ['SF Pro Display', 'PingFang SC', 'Heiti SC'];
 
 enum _BreathingMode { defaultBreath, customExercise }
 
@@ -53,9 +62,11 @@ class _BreathingOverlayState extends State<BreathingOverlay>
   Timer? _holdOpacityTimer;
   Timer? _countdownTimer;
   Timer? _hintTimer;
-  AudioPlayer? _soundPlayer;
+  AudioPlayer? _bowlPlayer;
+  AudioPlayer? _voicePlayer;
 
   var _mode = _BreathingMode.defaultBreath;
+  BreathingPhaseKind? _activePhaseKind;
   var _phaseText = '';
   var _practiceText = '';
   var _countdownText = '';
@@ -83,7 +94,7 @@ class _BreathingOverlayState extends State<BreathingOverlay>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _startDefaultSession();
-      unawaited(_syncSound());
+      unawaited(_syncBowlSound());
     });
   }
 
@@ -91,7 +102,13 @@ class _BreathingOverlayState extends State<BreathingOverlay>
   void didUpdateWidget(BreathingOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(widget.settings, _settings)) {
+      final previousZenSound = _settings.zenSound;
+      final previousZenVoiceCue = _settings.zenVoiceCue;
       _settings = widget.settings;
+      if (previousZenSound != _settings.zenSound ||
+          previousZenVoiceCue != _settings.zenVoiceCue) {
+        unawaited(_syncAudioCues());
+      }
     }
   }
 
@@ -103,7 +120,8 @@ class _BreathingOverlayState extends State<BreathingOverlay>
     _hintTimer?.cancel();
     _rotationController.dispose();
     unawaited(widget.hapticController.stop());
-    unawaited(_soundPlayer?.dispose() ?? Future<void>.value());
+    unawaited(_bowlPlayer?.dispose() ?? Future<void>.value());
+    unawaited(_voicePlayer?.dispose() ?? Future<void>.value());
     super.dispose();
   }
 
@@ -141,31 +159,39 @@ class _BreathingOverlayState extends State<BreathingOverlay>
             Positioned(
               left: 18,
               right: 18,
-              bottom: safeBottom + 88,
+              bottom: safeBottom + 48,
               child: _ZenHint(text: _hintText),
             ),
             Positioned(
-              left: 0,
-              right: 0,
-              bottom: safeBottom + 44,
+              left: 44,
+              right: 122,
+              bottom: safeBottom + 18,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _ZenCueButton(
                     label: '触感',
+                    width: 24,
                     active: _settings.zenHaptics,
                     onPressed: _toggleHaptics,
                   ),
-                  const SizedBox(width: 24),
                   _ZenCueButton(
                     label: '颂钵音',
+                    width: 40,
                     active: _settings.zenSound,
-                    onPressed: _toggleSound,
+                    onPressed: _toggleBowlSound,
                   ),
-                  const SizedBox(width: 24),
+                  _ZenCueButton(
+                    label: '人声提示',
+                    width: 52,
+                    active: _settings.zenVoiceCue,
+                    onPressed: _toggleVoiceCue,
+                  ),
                   _ZenCueButton(
                     key: const ValueKey('start-custom-breath-button'),
                     label: '自定义练习',
+                    width: 62,
                     active: _mode == _BreathingMode.customExercise,
                     onPressed: _startCustomExercise,
                   ),
@@ -173,8 +199,8 @@ class _BreathingOverlayState extends State<BreathingOverlay>
               ),
             ),
             Positioned(
-              right: 78,
-              bottom: safeBottom + 2,
+              right: 56,
+              bottom: safeBottom + 16,
               child: _ZenRoundButton(
                 label: '♪',
                 semanticLabel: widget.ambientLabel,
@@ -186,8 +212,8 @@ class _BreathingOverlayState extends State<BreathingOverlay>
               ),
             ),
             Positioned(
-              right: 22,
-              bottom: safeBottom + 7,
+              right: 18,
+              bottom: safeBottom + 18,
               child: _ZenExitButton(onPressed: widget.onExit),
             ),
           ],
@@ -207,6 +233,7 @@ class _BreathingOverlayState extends State<BreathingOverlay>
     _holdOpacityTimer?.cancel();
     _countdownTimer?.cancel();
     _mode = _BreathingMode.defaultBreath;
+    _activePhaseKind = null;
     _customCycleIndex = 0;
     _phaseSerial += 1;
     setState(() {
@@ -232,8 +259,10 @@ class _BreathingOverlayState extends State<BreathingOverlay>
     _countdownTimer?.cancel();
     _customCycleIndex = 0;
     _mode = _BreathingMode.customExercise;
+    _activePhaseKind = null;
     _phaseSerial += 1;
     unawaited(widget.hapticController.stop());
+    unawaited(_playPracticeStartVoiceCue());
     setState(() {
       _phaseText = '';
       _practiceText = _customBreathIntroText(_settings.customBreathRhythm);
@@ -320,6 +349,7 @@ class _BreathingOverlayState extends State<BreathingOverlay>
 
     final duration = Duration(seconds: phase.durationSeconds);
     final holdPhase = _isHoldPhase(phase.kind);
+    _activePhaseKind = phase.kind;
     final animationDuration = holdPhase
         ? Duration(milliseconds: max(1, duration.inMilliseconds ~/ 2))
         : duration;
@@ -338,6 +368,7 @@ class _BreathingOverlayState extends State<BreathingOverlay>
       _flowerRotationTurns = 0;
       _flowerVisible = true;
     });
+    unawaited(_playPhaseVoiceCue(phase.kind));
 
     if (holdPhase) {
       final remainingMs = max(
@@ -365,7 +396,9 @@ class _BreathingOverlayState extends State<BreathingOverlay>
     _holdOpacityTimer?.cancel();
     _countdownTimer?.cancel();
     final serial = ++_phaseSerial;
-    unawaited(widget.hapticController.stop());
+    _activePhaseKind = null;
+    unawaited(_finishCustomExerciseHaptics());
+    unawaited(_playPracticeCompleteVoiceCue());
     setState(() {
       _mode = _BreathingMode.defaultBreath;
       _phaseText = '';
@@ -405,6 +438,13 @@ class _BreathingOverlayState extends State<BreathingOverlay>
     );
   }
 
+  Future<void> _finishCustomExerciseHaptics() async {
+    await widget.hapticController.stop();
+    if (_settings.zenHaptics) {
+      await widget.hapticController.playCompletion();
+    }
+  }
+
   BreathingPhase _nextPhase(BreathingPhase phase, BreathingRhythm rhythm) {
     final phases = rhythm.phases;
     if (phases.isEmpty) return phase;
@@ -421,17 +461,32 @@ class _BreathingOverlayState extends State<BreathingOverlay>
     _updateSettings(next);
     if (enabled) {
       _showHint('需要打开手机振动功能');
+      unawaited(HapticFeedback.selectionClick());
       await _syncHapticsForSession();
     } else {
       await widget.hapticController.stop();
     }
   }
 
-  Future<void> _toggleSound() async {
+  Future<void> _toggleBowlSound() async {
     final enabled = !_settings.zenSound;
     final next = _settings.copyWith(zenSound: enabled);
     _updateSettings(next);
-    await _syncSound();
+    await _syncBowlSound();
+  }
+
+  Future<void> _toggleVoiceCue() async {
+    final enabled = !_settings.zenVoiceCue;
+    final next = _settings.copyWith(zenVoiceCue: enabled);
+    _updateSettings(next);
+    if (!enabled) {
+      await _voicePlayer?.stop();
+      return;
+    }
+    final phase = _activePhaseKind;
+    if (phase != null && _countdownText.isEmpty) {
+      await _playPhaseVoiceCue(phase);
+    }
   }
 
   void _updateSettings(AppSettings settings) {
@@ -456,23 +511,64 @@ class _BreathingOverlayState extends State<BreathingOverlay>
     }
   }
 
-  Future<void> _syncSound() async {
+  Future<void> _syncAudioCues() async {
+    await _syncBowlSound();
+    if (!_settings.zenVoiceCue) {
+      await _voicePlayer?.stop();
+      return;
+    }
+    final phase = _activePhaseKind;
+    if (phase != null && _countdownText.isEmpty) {
+      await _playPhaseVoiceCue(phase);
+    }
+  }
+
+  Future<void> _syncBowlSound() async {
     if (!_settings.zenSound) {
-      await _soundPlayer?.stop();
+      await _bowlPlayer?.stop();
       return;
     }
     try {
-      final player = _soundPlayer ??= AudioPlayer();
+      final player = _bowlPlayer ??= AudioPlayer();
       if (!player.playing) {
+        await player.stop();
         await player.setAsset(_breathSoundAsset);
         await player.setLoopMode(LoopMode.one);
-        await player.setVolume(0.55);
+        await player.setVolume(1);
         unawaited(player.play());
       }
     } on MissingPluginException {
       _showHint('颂钵音暂不可用');
     } on PlayerException {
       _showHint('颂钵音暂不可用');
+    }
+  }
+
+  Future<void> _playPhaseVoiceCue(BreathingPhaseKind phase) async {
+    await _playVoiceCueAsset(_voiceAssetForPhase(phase));
+  }
+
+  Future<void> _playPracticeStartVoiceCue() async {
+    await _playVoiceCueAsset(_voicePracticeStartAsset);
+  }
+
+  Future<void> _playPracticeCompleteVoiceCue() async {
+    await _playVoiceCueAsset(_voicePracticeCompleteAsset);
+  }
+
+  Future<void> _playVoiceCueAsset(String asset) async {
+    if (!_settings.zenVoiceCue) return;
+    try {
+      final player = _voicePlayer ??= AudioPlayer();
+      await player.stop();
+      await player.setLoopMode(LoopMode.off);
+      await player.setVolume(1);
+      await player.setAsset(asset);
+      unawaited(player.play());
+    } on MissingPluginException {
+      _showHint('人声提示暂不可用');
+    } on PlayerException {
+      _showHint('人声提示暂不可用');
     }
   }
 
@@ -541,6 +637,7 @@ class _BreathingStage extends StatelessWidget {
             dimension: stageSide,
             child: Stack(
               alignment: Alignment.center,
+              clipBehavior: Clip.none,
               children: [
                 if (countdownText.isNotEmpty)
                   _CountdownText(text: countdownText),
@@ -592,13 +689,16 @@ class _BreathingStage extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.58),
+                fontFamily: _zenTextFontFamily,
+                fontFamilyFallback: _zenTextFontFallback,
                 fontSize: 13,
+                fontWeight: FontWeight.w300,
                 height: 1.5,
                 shadows: const [
                   Shadow(
-                    color: Color(0x99000000),
-                    offset: Offset(0, 2),
-                    blurRadius: 10,
+                    color: Color(0x8F000000),
+                    offset: Offset(0, 1),
+                    blurRadius: 6,
                   ),
                 ],
               ),
@@ -644,15 +744,13 @@ class _PhaseText extends StatelessWidget {
       text,
       style: TextStyle(
         color: Colors.white.withValues(alpha: 0.85),
-        fontSize: 16,
+        fontFamily: _zenTextFontFamily,
+        fontFamilyFallback: _zenTextFontFallback,
+        fontSize: 14,
         fontWeight: FontWeight.w300,
         letterSpacing: 3,
         shadows: const [
-          Shadow(
-            color: Color(0x99000000),
-            offset: Offset(0, 2),
-            blurRadius: 12,
-          ),
+          Shadow(color: Color(0x99000000), offset: Offset(0, 1), blurRadius: 6),
         ],
       ),
     );
@@ -697,16 +795,17 @@ class _CountdownText extends StatelessWidget {
       },
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.92),
+          fontFamilyFallback: _zenNumberFontFallback,
           fontSize: 74,
-          fontWeight: FontWeight.w200,
+          fontWeight: FontWeight.w100,
           letterSpacing: 0,
-          shadows: [
+          shadows: const [
             Shadow(
-              color: Color(0x99000000),
+              color: Color(0x8F000000),
               offset: Offset(0, 4),
-              blurRadius: 24,
+              blurRadius: 17,
             ),
           ],
         ),
@@ -803,39 +902,52 @@ class _ZenCueButton extends StatelessWidget {
   const _ZenCueButton({
     super.key,
     required this.label,
+    required this.width,
     required this.active,
     required this.onPressed,
   });
 
   final String label;
+  final double width;
   final bool active;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: Colors.white.withValues(alpha: active ? 0.74 : 0.24),
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 10),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        textStyle: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0,
-        ),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          shadows: [
-            Shadow(
-              color: Color(0x99000000),
-              offset: Offset(0, 2),
-              blurRadius: 10,
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: onPressed,
+        child: SizedBox(
+          width: width,
+          height: 40,
+          child: Center(
+            child: Text(
+              label,
+              maxLines: 2,
+              softWrap: true,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.visible,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: active ? 0.74 : 0.18),
+                fontFamily: _zenTextFontFamily,
+                fontFamilyFallback: _zenTextFontFallback,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.5,
+                height: 1.12,
+                shadows: const [
+                  Shadow(
+                    color: Color(0x78000000),
+                    offset: Offset(0, 1),
+                    blurRadius: 5,
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -862,31 +974,32 @@ class _ZenRoundButton extends StatelessWidget {
     final opacity = disabled
         ? 0.24
         : active
-        ? 0.96
+        ? 0.95
         : 0.54;
     return Semantics(
       button: true,
       label: semanticLabel,
-      child: TextButton(
-        onPressed: onPressed,
-        style: TextButton.styleFrom(
-          foregroundColor: Colors.white.withValues(alpha: opacity),
-          padding: EdgeInsets.zero,
-          minimumSize: const Size.square(44),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          textStyle: const TextStyle(fontSize: 26, fontWeight: FontWeight.w500),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            shadows: [
-              Shadow(
-                color: Color(0x99000000),
-                offset: Offset(0, 2),
-                blurRadius: 12,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: onPressed,
+        child: SizedBox.square(
+          dimension: 30,
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: opacity),
+                fontSize: 18,
+                fontWeight: FontWeight.w300,
+                shadows: const [
+                  Shadow(
+                    color: Color(0x8C000000),
+                    offset: Offset(0, 2),
+                    blurRadius: 8,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -901,18 +1014,36 @@ class _ZenExitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: Colors.white.withValues(alpha: 0.62),
-        backgroundColor: Colors.black.withValues(alpha: 0.16),
-        padding: EdgeInsets.zero,
-        minimumSize: const Size.square(40),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        textStyle: const TextStyle(fontSize: 34, fontWeight: FontWeight.w300),
-        shape: const CircleBorder(),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: onPressed,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.16),
+          shape: BoxShape.circle,
+        ),
+        child: SizedBox.square(
+          dimension: 25,
+          child: Center(
+            child: Text(
+              '‹',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.62),
+                fontSize: 21,
+                fontWeight: FontWeight.w300,
+                height: 0.98,
+                shadows: const [
+                  Shadow(
+                    color: Color(0xB8000000),
+                    offset: Offset(0, 1),
+                    blurRadius: 7,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      child: const Text('‹'),
     );
   }
 }
@@ -934,12 +1065,15 @@ class _ZenHint extends StatelessWidget {
         textAlign: TextAlign.center,
         style: TextStyle(
           color: Colors.white.withValues(alpha: 0.46),
-          fontSize: 12,
+          fontFamily: _zenTextFontFamily,
+          fontFamilyFallback: _zenTextFontFallback,
+          fontSize: 11,
+          fontWeight: FontWeight.w300,
           shadows: const [
             Shadow(
-              color: Color(0x99000000),
-              offset: Offset(0, 2),
-              blurRadius: 12,
+              color: Color(0x85000000),
+              offset: Offset(0, 1),
+              blurRadius: 6,
             ),
           ],
         ),
@@ -975,6 +1109,15 @@ bool _isHoldPhase(BreathingPhaseKind kind) {
     BreathingPhaseKind.holdAfterInhale ||
     BreathingPhaseKind.holdAfterExhale => true,
     BreathingPhaseKind.inhale || BreathingPhaseKind.exhale => false,
+  };
+}
+
+String _voiceAssetForPhase(BreathingPhaseKind kind) {
+  return switch (kind) {
+    BreathingPhaseKind.inhale => _voiceInhaleAsset,
+    BreathingPhaseKind.exhale => _voiceExhaleAsset,
+    BreathingPhaseKind.holdAfterInhale ||
+    BreathingPhaseKind.holdAfterExhale => _voiceHoldAsset,
   };
 }
 

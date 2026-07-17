@@ -24,16 +24,16 @@ void main() {
     }
   });
 
-  test('downloads one remote video after the local cycle completes', () async {
+  test('downloads remote videos without waiting for a local cycle', () async {
     final loadedContent = await const AssetContentRepository().load();
     final local = loadedContent.videos.firstWhere(
       (item) => item.id == 'pixabay-28707',
     );
     final remoteA = loadedContent.videos.firstWhere(
-      (item) => item.id == 'pixabay-159703',
+      (item) => item.id == 'pixabay-228847',
     );
     final remoteB = loadedContent.videos.firstWhere(
-      (item) => item.id == 'pixabay-228847',
+      (item) => item.id == 'pixabay-47213',
     );
     final content = _withVideoMediaManifest(loadedContent, {
       remoteA.id: utf8.encode('video-a').length,
@@ -74,12 +74,8 @@ void main() {
       currentVideoId: local.id,
     );
 
-    expect(second, isNull);
-    expect(
-      queue.lastDecision?.reason,
-      MediaPrefetchBlockReason.localCycleIncomplete,
-    );
-    expect(queue.lastDecision?.remainingLocalVideoIds, {remoteA.id});
+    expect(second?.resource.id, remoteB.id);
+    expect(queue.index.cachedVideoFiles, contains(remoteB.id));
 
     final third = await queue.markVideoCycleCompleted(
       video: remoteA,
@@ -87,8 +83,11 @@ void main() {
       currentVideoId: remoteA.id,
     );
 
-    expect(third?.resource.id, remoteB.id);
-    expect(queue.index.cachedVideoFiles, contains(remoteB.id));
+    expect(third, isNull);
+    expect(
+      queue.lastDecision?.reason,
+      MediaPrefetchBlockReason.noRemoteCandidates,
+    );
     expect(savedIndexes, hasLength(2));
   });
 
@@ -98,10 +97,10 @@ void main() {
       (item) => item.id == 'pixabay-28707',
     );
     final missingRemote = loadedContent.videos.firstWhere(
-      (item) => item.id == 'pixabay-159703',
+      (item) => item.id == 'pixabay-228847',
     );
     final fallbackRemote = loadedContent.videos.firstWhere(
-      (item) => item.id == 'pixabay-228847',
+      (item) => item.id == 'pixabay-47213',
     );
     final content = _withVideoMediaManifest(loadedContent, {
       missingRemote.id: utf8.encode('missing').length,
@@ -146,7 +145,7 @@ void main() {
       (item) => item.id == 'pixabay-28707',
     );
     final remote = loadedContent.videos.firstWhere(
-      (item) => item.id == 'pixabay-159703',
+      (item) => item.id == 'pixabay-228847',
     );
     final content = _withVideoMediaManifest(loadedContent, {
       remote.id: utf8.encode('video-a').length,
@@ -183,6 +182,42 @@ void main() {
       latestIndex.cachedAmbientAudioFiles,
     );
     expect(queue.index.cachedVideoFiles, contains(remote.id));
+  });
+
+  test('stops video prefetch when the cache budget is full', () async {
+    final loadedContent = await const AssetContentRepository().load();
+    final cached = loadedContent.videos.firstWhere(
+      (item) => item.id == 'pixabay-28707',
+    );
+    final remote = loadedContent.videos.firstWhere(
+      (item) => item.id == 'pixabay-228847',
+    );
+    final content = _withVideoMediaManifest(loadedContent, {
+      cached.id: 8,
+      remote.id: 8,
+    });
+    final queue = MediaVideoPrefetchQueue(
+      content: content,
+      cacheRoot: tempDir,
+      client: const _FakeRemoteFileClient({}),
+      initialIndex: const MediaCacheIndex().withCachedVideo(
+        cached.id,
+        '/cache/videos/cached.mp4',
+      ),
+      videoCacheBudgetBytes: 8,
+      persistIndex: (_) async {},
+    );
+
+    final result = await queue.maybeDownloadNext(
+      playbackScope: [cached, remote],
+      currentVideoId: cached.id,
+    );
+
+    expect(result, isNull);
+    expect(
+      queue.lastDecision?.reason,
+      MediaPrefetchBlockReason.cacheBudgetFull,
+    );
   });
 }
 

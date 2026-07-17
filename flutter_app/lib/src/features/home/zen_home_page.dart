@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../content/ambient_resolver.dart';
 import '../../content/content_models.dart';
 import '../../content/content_repository.dart';
+import '../../content/quote_repository.dart';
 import '../../content/remote_content_sync.dart';
 import '../../media/bundled_media_catalog.dart';
 import '../../media/media_ambient_download_queue.dart';
@@ -17,8 +18,10 @@ import '../../media/media_resource_resolver.dart';
 import '../../media/media_video_prefetch_queue.dart';
 import '../../media/remote_file_client.dart';
 import '../../preferences/user_preferences.dart';
+import '../../weather/weather_repository.dart';
 import '../breathing/breathing_models.dart';
 import '../breathing/breathing_page.dart';
+import '../licenses/license_page.dart' as app_license;
 import 'ambient_audio_engine.dart';
 import 'crossfade_video_background.dart';
 
@@ -46,6 +49,8 @@ class ZenHomePage extends StatefulWidget {
     this.mediaDownloadClient,
     this.onMediaDownloaded,
     this.bundledMediaCatalog,
+    this.weatherRepository,
+    this.quoteRepository = const AssetQuoteRepository(),
   });
 
   final ContentRepository repository;
@@ -58,6 +63,8 @@ class ZenHomePage extends StatefulWidget {
   final RemoteFileClient? mediaDownloadClient;
   final ValueChanged<MediaDownloadResult>? onMediaDownloaded;
   final MediaResourceCatalog? bundledMediaCatalog;
+  final WeatherForecastRepository? weatherRepository;
+  final QuoteRepository quoteRepository;
 
   @override
   State<ZenHomePage> createState() => _ZenHomePageState();
@@ -87,12 +94,23 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
   String? _ambientDownloadRequestedForMixId;
   Future<Directory>? _mediaCacheRootFuture;
   HttpRemoteFileClient? _ownedMediaDownloadClient;
+  OpenMeteoWeatherRepository? _ownedWeatherRepository;
+  WeatherForecast? _forecast;
+  var _weatherLoading = false;
+  String? _weatherError;
+  var _weatherVisible = false;
+  var _weatherRequestSerial = 0;
+  String? _weatherRequestKey;
+  var _quotes = <QuoteItem>[];
+  QuoteItem? _currentQuote;
+  var _homeHorizontalDragDelta = 0.0;
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _toastTimer?.cancel();
     _ownedMediaDownloadClient?.close(force: true);
+    _ownedWeatherRepository?.close(force: true);
     super.dispose();
   }
 
@@ -113,6 +131,10 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
         ..addAll(preferences.favoriteKeys);
       _scope = preferences.shuffleScope;
       _settings = preferences.settings;
+      _quotes = await widget.quoteRepository.load().catchError(
+        (_) => const <QuoteItem>[],
+      );
+      _currentQuote ??= _pickQuote();
       _bundledMediaCatalog =
           widget.bundledMediaCatalog ?? await loadBundledMediaCatalog(content);
       _mediaCacheIndex = cacheIndex;
@@ -120,6 +142,7 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
         bundled: _bundledMediaCatalog,
       );
       _resetQueue(content);
+      _refreshWeatherFromSettings(_settings);
       _startRemoteContentCheck(content);
       return content;
     });
@@ -133,8 +156,9 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
+        _hideTransientOverlaysForLifecyclePause();
       case AppLifecycleState.detached:
-        _suspendForLifecyclePause();
+        _suspendForLifecycleDetach();
     }
   }
 
@@ -195,75 +219,106 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
             _favoriteKeys.contains(_favoriteKey(content, video));
 
         return Scaffold(
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() => _chromeVisible = !_chromeVisible),
-                onDoubleTap: video == null
-                    ? null
-                    : () => _toggleFavorite(content, video),
-                onVerticalDragEnd: (details) {
-                  final velocity = details.primaryVelocity ?? 0;
-                  if (velocity < -220) _nextVideo(content);
-                  if (velocity > 220) _previousVideo();
-                },
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CrossfadeVideoBackground(
-                      video: video,
-                      videoBase: content.config.defaultVideoBase,
-                      enabled: widget.loadRemoteImages,
-                      resource: videoResource,
-                      onVideoCycleCompleted: (video) =>
-                          _handleVideoCycleCompleted(content, video),
-                    ),
-                    const _BackgroundScrim(),
-                  ],
-                ),
-              ),
-              AnimatedOpacity(
-                opacity: _chromeVisible && !_breathingActive ? 1 : 0,
-                duration: const Duration(milliseconds: 220),
-                child: IgnorePointer(
-                  ignoring: !_chromeVisible || _breathingActive,
-                  child: _HomeChrome(
-                    video: video,
-                    ambientMix: ambientMix,
-                    ambientOn: _ambientOn,
-                    emptyFavorites: _scope == _favoriteScope && _queue.isEmpty,
-                    isFavorite: isFavorite,
-                    settings: _settings,
-                    onOpenBreathing: _enterBreathing,
-                    onOpenSettings: () => _openSettings(content),
-                    onToggleAmbient: () =>
-                        setState(() => _ambientOn = !_ambientOn),
-                    onToggleInfo: () =>
-                        setState(() => _infoVisible = !_infoVisible),
+          body: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragEnd: _breathingActive
+                ? null
+                : (details) => _handleHomeHorizontalDragEnd(content, details),
+            onHorizontalDragStart: _breathingActive
+                ? null
+                : (_) => _homeHorizontalDragDelta = 0,
+            onHorizontalDragUpdate: _breathingActive
+                ? null
+                : (details) {
+                    _homeHorizontalDragDelta += details.primaryDelta ?? 0;
+                  },
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() => _chromeVisible = !_chromeVisible),
+                  onDoubleTap: video == null
+                      ? null
+                      : () => _toggleFavorite(content, video),
+                  onVerticalDragEnd: (details) {
+                    final velocity = details.primaryVelocity ?? 0;
+                    if (velocity < -220) _nextVideo(content);
+                    if (velocity > 220) _previousVideo();
+                  },
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CrossfadeVideoBackground(
+                        video: video,
+                        videoBase: content.config.defaultVideoBase,
+                        enabled: widget.loadRemoteImages,
+                        resource: videoResource,
+                        onVideoCycleCompleted: (video) =>
+                            _handleVideoCycleCompleted(content, video),
+                      ),
+                      const _BackgroundScrim(),
+                    ],
                   ),
                 ),
-              ),
-              if (_infoVisible && video != null && _chromeVisible)
-                _VideoInfoPanel(
-                  video: video,
-                  onClose: () => setState(() => _infoVisible = false),
+                AnimatedOpacity(
+                  opacity: _chromeVisible && !_breathingActive ? 1 : 0,
+                  duration: const Duration(milliseconds: 220),
+                  child: IgnorePointer(
+                    ignoring: !_chromeVisible || _breathingActive,
+                    child: _HomeChrome(
+                      video: video,
+                      quote: _currentQuote,
+                      ambientMix: ambientMix,
+                      ambientOn: _ambientOn,
+                      emptyFavorites:
+                          _scope == _favoriteScope && _queue.isEmpty,
+                      isFavorite: isFavorite,
+                      settings: _settings,
+                      forecast: _forecast,
+                      weatherLoading: _weatherLoading,
+                      weatherError: _weatherError,
+                      onOpenBreathing: _enterBreathing,
+                      onOpenSettings: () => _openSettings(content),
+                      onToggleAmbient: () =>
+                          setState(() => _ambientOn = !_ambientOn),
+                      onNextQuote: _nextQuote,
+                      onToggleInfo: () => setState(() {
+                        _infoVisible = !_infoVisible;
+                        _weatherVisible = false;
+                      }),
+                      onToggleWeather: _toggleWeather,
+                    ),
+                  ),
                 ),
-              AmbientAudioEngine(enabled: _ambientOn, mix: ambientMix),
-              if (_breathingActive)
-                BreathingOverlay(
-                  settings: _settings,
-                  ambientOn: _ambientOn,
-                  ambientAvailable: ambientMix != null,
-                  ambientLabel: ambientMix?.label ?? '无音轨',
-                  onSettingsChanged: _handleBreathingSettingsChanged,
-                  onToggleAmbient: () =>
-                      setState(() => _ambientOn = !_ambientOn),
-                  onExit: _exitBreathing,
-                ),
-              if (_toastMessage != null) _ToastMessage(message: _toastMessage!),
-            ],
+                if (_weatherVisible && _forecast != null && _chromeVisible)
+                  _WeatherInfoPanel(
+                    forecast: _forecast!,
+                    onClose: () => setState(() => _weatherVisible = false),
+                  ),
+                if (_infoVisible && video != null && _chromeVisible)
+                  _VideoInfoOverlay(
+                    video: video,
+                    isFavorite: isFavorite,
+                    onToggleFavorite: () => _toggleFavorite(content, video),
+                    onClose: () => setState(() => _infoVisible = false),
+                  ),
+                AmbientAudioEngine(enabled: _ambientOn, mix: ambientMix),
+                if (_breathingActive)
+                  BreathingOverlay(
+                    settings: _settings,
+                    ambientOn: _ambientOn,
+                    ambientAvailable: ambientMix != null,
+                    ambientLabel: ambientMix?.label ?? '无音轨',
+                    onSettingsChanged: _handleBreathingSettingsChanged,
+                    onToggleAmbient: () =>
+                        setState(() => _ambientOn = !_ambientOn),
+                    onExit: _exitBreathing,
+                  ),
+                if (_toastMessage != null)
+                  _ToastMessage(message: _toastMessage!),
+              ],
+            ),
           ),
         );
       },
@@ -274,9 +329,13 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
     var nextSettings = _settings;
     final shouldResetCues =
         !_settings.rememberZenCues &&
-        (_settings.zenHaptics || _settings.zenSound);
+        (_settings.zenHaptics || _settings.zenSound || _settings.zenVoiceCue);
     if (shouldResetCues) {
-      nextSettings = _settings.copyWith(zenHaptics: false, zenSound: false);
+      nextSettings = _settings.copyWith(
+        zenHaptics: false,
+        zenSound: false,
+        zenVoiceCue: false,
+      );
       unawaited(UserPreferences.saveSettings(nextSettings));
     }
     setState(() {
@@ -296,16 +355,26 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
     unawaited(UserPreferences.saveSettings(settings));
   }
 
-  void _suspendForLifecyclePause() {
+  void _hideTransientOverlaysForLifecyclePause() {
+    if (!_infoVisible && !_weatherVisible) return;
+    setState(() {
+      _infoVisible = false;
+      _weatherVisible = false;
+    });
+  }
+
+  void _suspendForLifecycleDetach() {
     final shouldResumeBreathing =
         _resumeBreathingAfterLifecycle || _breathingActive;
     final nextSettings = _settings.copyWith(
       zenHaptics: _settings.rememberZenCues ? _settings.zenHaptics : false,
       zenSound: false,
+      zenVoiceCue: false,
     );
     final settingsChanged =
         nextSettings.zenHaptics != _settings.zenHaptics ||
-        nextSettings.zenSound != _settings.zenSound;
+        nextSettings.zenSound != _settings.zenSound ||
+        nextSettings.zenVoiceCue != _settings.zenVoiceCue;
 
     if (!_breathingActive &&
         _resumeBreathingAfterLifecycle == shouldResumeBreathing &&
@@ -344,6 +413,23 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
     return _queue[_queueIndex];
   }
 
+  QuoteItem? _pickQuote([String? currentContent]) {
+    if (_quotes.isEmpty) return null;
+    if (_quotes.length == 1) return _quotes.first;
+
+    var picked = _quotes[_random.nextInt(_quotes.length)];
+    while (picked.content == currentContent) {
+      picked = _quotes[_random.nextInt(_quotes.length)];
+    }
+    return picked;
+  }
+
+  void _nextQuote() {
+    final next = _pickQuote(_currentQuote?.content);
+    if (next == null) return;
+    setState(() => _currentQuote = next);
+  }
+
   Future<void> _openSettings(ContentBundle content) async {
     final result = await Navigator.of(context).push<_SettingsResult>(
       MaterialPageRoute(
@@ -362,12 +448,29 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
       ),
     );
     if (result != null && mounted) {
+      final previousSettings = _settings;
       setState(() {
         _settings = result.settings;
       });
       unawaited(UserPreferences.saveSettings(result.settings));
-      _changeScope(content, result.scope);
+      if (result.scope != _scope) {
+        _changeScope(content, result.scope);
+      }
+      if (_weatherSettingsChanged(previousSettings, result.settings)) {
+        _refreshWeatherFromSettings(result.settings);
+      }
     }
+  }
+
+  void _handleHomeHorizontalDragEnd(
+    ContentBundle content,
+    DragEndDetails details,
+  ) {
+    final velocity = details.primaryVelocity ?? 0;
+    final delta = _homeHorizontalDragDelta;
+    _homeHorizontalDragDelta = 0;
+    if (velocity < -220 || delta < -96) _openSettings(content);
+    if (velocity > 220 || delta > 96) _enterBreathing();
   }
 
   void _changeScope(ContentBundle content, String scope) {
@@ -408,7 +511,7 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
         message = '已取消收藏';
       } else {
         _favoriteKeys.add(key);
-        message = '已收藏';
+        message = '收藏成功';
       }
       if (_scope == _favoriteScope) {
         _resetQueue(content, avoidVideoId: video.id);
@@ -584,6 +687,73 @@ class _ZenHomePageState extends State<ZenHomePage> with WidgetsBindingObserver {
   RemoteFileClient _downloadClient() {
     return _ownedMediaDownloadClient ??= HttpRemoteFileClient();
   }
+
+  WeatherForecastRepository get _weatherRepository {
+    return widget.weatherRepository ??
+        (_ownedWeatherRepository ??= OpenMeteoWeatherRepository());
+  }
+
+  void _refreshWeatherFromSettings(AppSettings settings) {
+    if (!mounted) return;
+    final city = settings.city.trim();
+    if (!settings.showWeather || city.isEmpty) {
+      setState(() {
+        _forecast = null;
+        _weatherLoading = false;
+        _weatherError = null;
+        _weatherVisible = false;
+        _weatherRequestKey = null;
+      });
+      return;
+    }
+
+    final requestKey = '${city.toLowerCase()}|${settings.temperatureUnit}';
+    if (_weatherLoading && _weatherRequestKey == requestKey) return;
+    _weatherRequestKey = requestKey;
+    final requestSerial = ++_weatherRequestSerial;
+    setState(() {
+      _weatherLoading = _forecast == null;
+      _weatherError = null;
+    });
+
+    unawaited(
+      _weatherRepository
+          .getForecast(city: city, temperatureUnit: settings.temperatureUnit)
+          .then((forecast) {
+            if (!mounted || requestSerial != _weatherRequestSerial) return;
+            setState(() {
+              _forecast = forecast;
+              _weatherLoading = false;
+              _weatherError = null;
+            });
+          })
+          .catchError((_) {
+            if (!mounted || requestSerial != _weatherRequestSerial) return;
+            setState(() {
+              _weatherLoading = false;
+              _weatherError = '天气暂不可用';
+              _weatherVisible = false;
+            });
+          }),
+    );
+  }
+
+  bool _weatherSettingsChanged(AppSettings before, AppSettings after) {
+    return before.showWeather != after.showWeather ||
+        before.city.trim() != after.city.trim() ||
+        before.temperatureUnit != after.temperatureUnit;
+  }
+
+  void _toggleWeather() {
+    if (_forecast == null) {
+      _refreshWeatherFromSettings(_settings);
+      return;
+    }
+    setState(() {
+      _weatherVisible = !_weatherVisible;
+      _infoVisible = false;
+    });
+  }
 }
 
 class CategoryOption {
@@ -596,27 +766,39 @@ class CategoryOption {
 class _HomeChrome extends StatelessWidget {
   const _HomeChrome({
     required this.video,
+    required this.quote,
     required this.ambientMix,
     required this.ambientOn,
     required this.emptyFavorites,
     required this.isFavorite,
     required this.settings,
+    required this.forecast,
+    required this.weatherLoading,
+    required this.weatherError,
     required this.onOpenBreathing,
     required this.onOpenSettings,
     required this.onToggleAmbient,
+    required this.onNextQuote,
     required this.onToggleInfo,
+    required this.onToggleWeather,
   });
 
   final VideoItem? video;
+  final QuoteItem? quote;
   final AmbientMix? ambientMix;
   final bool ambientOn;
   final bool emptyFavorites;
   final bool isFavorite;
   final AppSettings settings;
+  final WeatherForecast? forecast;
+  final bool weatherLoading;
+  final String? weatherError;
   final VoidCallback onOpenBreathing;
   final VoidCallback onOpenSettings;
   final VoidCallback onToggleAmbient;
+  final VoidCallback onNextQuote;
   final VoidCallback onToggleInfo;
+  final VoidCallback onToggleWeather;
 
   @override
   Widget build(BuildContext context) {
@@ -634,28 +816,35 @@ class _HomeChrome extends StatelessWidget {
                   Expanded(
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: video == null ? null : onToggleInfo,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
+                      child: InkWell(
+                        onTap: video == null ? null : onToggleInfo,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
+                            horizontal: 2,
+                            vertical: 5,
                           ),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 18,
-                        ),
-                        label: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                width: 44,
+                                height: 1,
+                                color: Colors.white.withValues(alpha: 0.58),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -665,7 +854,12 @@ class _HomeChrome extends StatelessWidget {
                   const Spacer(),
                 if (settings.showWeather) ...[
                   const SizedBox(width: 10),
-                  const _WeatherPill(),
+                  _WeatherPill(
+                    forecast: forecast,
+                    loading: weatherLoading,
+                    error: weatherError,
+                    onTap: onToggleWeather,
+                  ),
                 ],
               ],
             ),
@@ -676,21 +870,11 @@ class _HomeChrome extends StatelessWidget {
                 children: [
                   if (settings.showClock) ...[
                     const _ClockText(),
-                    if (settings.showQuote || emptyFavorites || isFavorite)
+                    if (settings.showQuote || emptyFavorites)
                       const SizedBox(height: 12),
                   ],
-                  if (settings.showQuote)
-                    Text(
-                      video?.description ?? '先收藏几条喜欢的视频',
-                      textAlign: TextAlign.center,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.82),
-                        fontSize: 16,
-                        height: 1.6,
-                      ),
-                    ),
+                  if (settings.showQuote && quote != null)
+                    _QuoteBlock(quote: quote!, onTap: onNextQuote),
                   if (emptyFavorites) ...[
                     const SizedBox(height: 18),
                     Text(
@@ -698,16 +882,6 @@ class _HomeChrome extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.72),
                         fontSize: 13,
-                      ),
-                    ),
-                  ],
-                  if (isFavorite && !emptyFavorites) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      '已收藏',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.58),
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -729,6 +903,70 @@ class _HomeChrome extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuoteBlock extends StatelessWidget {
+  const _QuoteBlock({required this.quote, required this.onTap});
+
+  final QuoteItem quote;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 330),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                quote.content,
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.88),
+                  fontSize: 16,
+                  height: 1.48,
+                  shadows: const [
+                    Shadow(
+                      color: Color(0x70000000),
+                      offset: Offset(0, 3),
+                      blurRadius: 14,
+                    ),
+                  ],
+                ),
+              ),
+              if (quote.author.isNotEmpty) ...[
+                const SizedBox(height: 7),
+                Text(
+                  '- ${quote.author}',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.66),
+                    fontSize: 12,
+                    shadows: const [
+                      Shadow(
+                        color: Color(0x66000000),
+                        offset: Offset(0, 2),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -945,6 +1183,7 @@ class _SettingsPageState extends State<_SettingsPage> {
     return Theme(
       data: ThemeData(
         brightness: Brightness.light,
+        fontFamily: 'PingFang SC',
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF47C7A2),
           brightness: Brightness.light,
@@ -957,26 +1196,35 @@ class _SettingsPageState extends State<_SettingsPage> {
           child: Stack(
             children: [
               ListView(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 104),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 86),
                 children: [
-                  const _SettingsHeader(),
+                  _SettingsHeader(onOpenLicenses: _openLicenses),
                   _SettingsSection(
                     title: '显示',
                     children: [
-                      _SwitchRow(
-                        label: '时间',
-                        value: _settings.showClock,
-                        onChanged: (value) => setState(
-                          () =>
-                              _settings = _settings.copyWith(showClock: value),
-                        ),
-                      ),
-                      _SwitchRow(
-                        label: '天气',
-                        value: _settings.showWeather,
-                        onChanged: (value) => setState(
+                      _DisplayToggleRow(
+                        showClock: _settings.showClock,
+                        showWeather: _settings.showWeather,
+                        showQuote: _settings.showQuote,
+                        showVideoMeta: _settings.showVideoMeta,
+                        onClockTap: () => setState(
                           () => _settings = _settings.copyWith(
-                            showWeather: value,
+                            showClock: !_settings.showClock,
+                          ),
+                        ),
+                        onWeatherTap: () => setState(
+                          () => _settings = _settings.copyWith(
+                            showWeather: !_settings.showWeather,
+                          ),
+                        ),
+                        onQuoteTap: () => setState(
+                          () => _settings = _settings.copyWith(
+                            showQuote: !_settings.showQuote,
+                          ),
+                        ),
+                        onVideoMetaTap: () => setState(
+                          () => _settings = _settings.copyWith(
+                            showVideoMeta: !_settings.showVideoMeta,
                           ),
                         ),
                       ),
@@ -984,6 +1232,9 @@ class _SettingsPageState extends State<_SettingsPage> {
                         _WeatherSettingsRow(
                           city: _settings.city,
                           temperatureUnit: _settings.temperatureUnit,
+                          onCityChanged: (value) => setState(
+                            () => _settings = _settings.copyWith(city: value),
+                          ),
                           onUnitChanged: (value) => setState(
                             () => _settings = _settings.copyWith(
                               temperatureUnit: value,
@@ -991,25 +1242,8 @@ class _SettingsPageState extends State<_SettingsPage> {
                           ),
                         ),
                       _SwitchRow(
-                        label: '语录',
-                        value: _settings.showQuote,
-                        onChanged: (value) => setState(
-                          () =>
-                              _settings = _settings.copyWith(showQuote: value),
-                        ),
-                      ),
-                      _SwitchRow(
-                        label: '视频信息',
-                        value: _settings.showVideoMeta,
-                        onChanged: (value) => setState(
-                          () => _settings = _settings.copyWith(
-                            showVideoMeta: value,
-                          ),
-                        ),
-                      ),
-                      _SwitchRow(
                         label: '保留呼吸页设置',
-                        hint: '仅保留颂钵音和触感；退出后重新进入仍先静音',
+                        hint: '仅保留呼吸提示音和触感；退出后重新进入仍先静音',
                         value: _settings.rememberZenCues,
                         onChanged: (value) => setState(
                           () => _settings = _settings.copyWith(
@@ -1019,37 +1253,27 @@ class _SettingsPageState extends State<_SettingsPage> {
                       ),
                     ],
                   ),
-                  _SettingsSection(
-                    title: '背景视频',
+                  _SettingsPlainCard(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.only(top: 14, bottom: 18),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const _SettingsLabel('播放范围'),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
                             _ScopeGrid(
                               selectedScope: _selectedScope,
                               favoriteCount: widget.favoriteCount,
                               onChanged: (scope) =>
                                   setState(() => _selectedScope = scope),
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              '当前内容库 ${widget.videoCount} 条公开视频',
-                              style: const TextStyle(
-                                color: Color(0xFF7A8792),
-                                fontSize: 12,
-                              ),
-                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  _SettingsSection(
-                    title: '呼吸节奏',
+                  _SettingsPlainCard(
                     children: [
                       _BreathingRhythmSettings(
                         settings: _settings,
@@ -1058,16 +1282,20 @@ class _SettingsPageState extends State<_SettingsPage> {
                       ),
                     ],
                   ),
-                  _SettingsSection(
-                    title: '视频背景音',
+                  _SettingsPlainCard(
                     children: [
-                      const SizedBox(height: 12),
-                      _SegmentedAudioMode(
-                        value: _settings.ambientAudioMode,
-                        onChanged: _changeAmbientAudioMode,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: _InlineSettingsRow(
+                          label: '背景音频',
+                          child: _SegmentedAudioMode(
+                            value: _settings.ambientAudioMode,
+                            onChanged: _changeAmbientAudioMode,
+                          ),
+                        ),
                       ),
                       if (_settings.ambientAudioMode == 'custom') ...[
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 6),
                         _CustomAmbientControls(
                           options: widget.customTrackOptions,
                           mix: _settings.customAmbientMix,
@@ -1079,7 +1307,7 @@ class _SettingsPageState extends State<_SettingsPage> {
                               _toggleAmbientAudition(auditionMix),
                         ),
                       ],
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ],
@@ -1163,6 +1391,14 @@ class _SettingsPageState extends State<_SettingsPage> {
       ).showSnackBar(const SnackBar(content: Text('拖动音量开始试听')));
     }
   }
+
+  Future<void> _openLicenses() {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => app_license.LicensePage(content: widget.content),
+      ),
+    );
+  }
 }
 
 class _SettingsResult {
@@ -1173,27 +1409,42 @@ class _SettingsResult {
 }
 
 class _SettingsHeader extends StatelessWidget {
-  const _SettingsHeader();
+  const _SettingsHeader({required this.onOpenLicenses});
+
+  final VoidCallback onOpenLicenses;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.only(bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            '© 呼吸Zen',
-            style: TextStyle(
-              color: Color(0xFF15222B),
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: InkWell(
+              onTap: onOpenLicenses,
+              borderRadius: BorderRadius.circular(6),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  '© 呼吸Zen',
+                  style: TextStyle(
+                    color: Color(0xFF15222B),
+                    fontSize: 23,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ),
           ),
-          SizedBox(height: 6),
-          Text(
+          const Text(
             '安静的呼吸与风景',
-            style: TextStyle(color: Color(0xFF6E7C86), fontSize: 13),
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              color: Color(0xFF6E7C86),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -1210,8 +1461,8 @@ class _SettingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(8),
@@ -1228,21 +1479,183 @@ class _SettingsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 48,
+            height: 38,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Color(0xFF7A8792),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              child: _SettingsLabel(title),
             ),
           ),
           ...children,
         ],
+      ),
+    );
+  }
+}
+
+class _SettingsPlainCard extends StatelessWidget {
+  const _SettingsPlainCard({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0x1A15222B)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F223A48),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+}
+
+class _InlineSettingsRow extends StatelessWidget {
+  const _InlineSettingsRow({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(width: 72, child: _SettingsLabel(label)),
+        const SizedBox(width: 8),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
+
+class _DisplayToggleRow extends StatelessWidget {
+  const _DisplayToggleRow({
+    required this.showClock,
+    required this.showWeather,
+    required this.showQuote,
+    required this.showVideoMeta,
+    required this.onClockTap,
+    required this.onWeatherTap,
+    required this.onQuoteTap,
+    required this.onVideoMetaTap,
+  });
+
+  final bool showClock;
+  final bool showWeather;
+  final bool showQuote;
+  final bool showVideoMeta;
+  final VoidCallback onClockTap;
+  final VoidCallback onWeatherTap;
+  final VoidCallback onQuoteTap;
+  final VoidCallback onVideoMetaTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: Color(0x1215222B))),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: _DisplayTogglePill(
+                label: '时间',
+                active: showClock,
+                onTap: onClockTap,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DisplayTogglePill(
+                label: '天气',
+                active: showWeather,
+                onTap: onWeatherTap,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DisplayTogglePill(
+                label: '语录',
+                active: showQuote,
+                onTap: onQuoteTap,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DisplayTogglePill(
+                label: '视频信息',
+                active: showVideoMeta,
+                onTap: onVideoMetaTap,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DisplayTogglePill extends StatelessWidget {
+  const _DisplayTogglePill({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      toggled: active,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+          height: 38,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? const Color(0xFF47C7A2) : const Color(0xFFE3EAEC),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: active ? const Color(0x0047C7A2) : const Color(0x1215222B),
+            ),
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                color: active ? Colors.white : const Color(0xFF6F7D86),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1268,7 +1681,7 @@ class _SwitchRow extends StatelessWidget {
         border: Border(top: BorderSide(color: Color(0x1215222B))),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
             Expanded(
@@ -1279,7 +1692,7 @@ class _SwitchRow extends StatelessWidget {
                     label,
                     style: const TextStyle(
                       color: Color(0xFF1D2C36),
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1289,17 +1702,24 @@ class _SwitchRow extends StatelessWidget {
                       hint!,
                       style: const TextStyle(
                         color: Color(0xFF7A8792),
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                   ],
                 ],
               ),
             ),
-            Switch(
-              value: value,
-              activeThumbColor: const Color(0xFF47C7A2),
-              onChanged: onChanged,
+            SizedBox(
+              width: 52,
+              child: Transform.scale(
+                scale: 0.84,
+                alignment: Alignment.centerRight,
+                child: Switch(
+                  value: value,
+                  activeThumbColor: const Color(0xFF47C7A2),
+                  onChanged: onChanged,
+                ),
+              ),
             ),
           ],
         ),
@@ -1308,16 +1728,48 @@ class _SwitchRow extends StatelessWidget {
   }
 }
 
-class _WeatherSettingsRow extends StatelessWidget {
+class _WeatherSettingsRow extends StatefulWidget {
   const _WeatherSettingsRow({
     required this.city,
     required this.temperatureUnit,
+    required this.onCityChanged,
     required this.onUnitChanged,
   });
 
   final String city;
   final String temperatureUnit;
+  final ValueChanged<String> onCityChanged;
   final ValueChanged<String> onUnitChanged;
+
+  @override
+  State<_WeatherSettingsRow> createState() => _WeatherSettingsRowState();
+}
+
+class _WeatherSettingsRowState extends State<_WeatherSettingsRow> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.city);
+  }
+
+  @override
+  void didUpdateWidget(covariant _WeatherSettingsRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.city != _controller.text) {
+      _controller.value = TextEditingValue(
+        text: widget.city,
+        selection: TextSelection.collapsed(offset: widget.city.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1338,10 +1790,18 @@ class _WeatherSettingsRow extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
-                    vertical: 10,
+                    vertical: 1,
                   ),
-                  child: Text(
-                    city,
+                  child: TextField(
+                    key: const ValueKey('weather-city-input'),
+                    controller: _controller,
+                    onChanged: widget.onCityChanged,
+                    textInputAction: TextInputAction.done,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '城市',
+                      isDense: true,
+                    ),
                     style: const TextStyle(
                       color: Color(0xFF1D2C36),
                       fontSize: 14,
@@ -1353,14 +1813,14 @@ class _WeatherSettingsRow extends StatelessWidget {
             const SizedBox(width: 8),
             _UnitPill(
               label: '摄氏度',
-              active: temperatureUnit == 'celsius',
-              onTap: () => onUnitChanged('celsius'),
+              active: widget.temperatureUnit == 'celsius',
+              onTap: () => widget.onUnitChanged('celsius'),
             ),
             const SizedBox(width: 6),
             _UnitPill(
               label: '华氏度',
-              active: temperatureUnit == 'fahrenheit',
-              onTap: () => onUnitChanged('fahrenheit'),
+              active: widget.temperatureUnit == 'fahrenheit',
+              onTap: () => widget.onUnitChanged('fahrenheit'),
             ),
           ],
         ),
@@ -1436,41 +1896,97 @@ class _ScopeGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _categoryOptions.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 2.35,
-      ),
-      itemBuilder: (context, index) {
-        final option = _categoryOptions[index];
-        final selected = selectedScope == option.value;
-        final disabled = option.value == _favoriteScope && favoriteCount == 0;
-        return TextButton(
-          onPressed: disabled ? null : () => onChanged(option.value),
-          style: TextButton.styleFrom(
-            foregroundColor: selected ? Colors.white : const Color(0xFF40505B),
-            disabledForegroundColor: const Color(0x667A8792),
-            backgroundColor: selected
-                ? const Color(0xFF47C7A2)
-                : const Color(0xFFE9EFF1),
-            disabledBackgroundColor: const Color(0x55E9EFF1),
-            padding: EdgeInsets.zero,
-            textStyle: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+    return SizedBox(
+      height: 38,
+      child: Row(
+        children: [
+          for (var index = 0; index < _categoryOptions.length; index++) ...[
+            if (index > 0) const SizedBox(width: 8),
+            Expanded(
+              child: _ScopePill(
+                option: _categoryOptions[index],
+                selected: selectedScope == _categoryOptions[index].value,
+                disabled:
+                    _categoryOptions[index].value == _favoriteScope &&
+                    favoriteCount == 0,
+                onChanged: onChanged,
+              ),
             ),
-            shape: RoundedRectangleBorder(
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ScopePill extends StatelessWidget {
+  const _ScopePill({
+    required this.option,
+    required this.selected,
+    required this.disabled,
+    required this.onChanged,
+  });
+
+  final CategoryOption option;
+  final bool selected;
+  final bool disabled;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = !disabled;
+    final backgroundColor = selected
+        ? const Color(0xFF47C7A2)
+        : enabled
+        ? const Color(0xFFE3EAEC)
+        : const Color(0x55E3EAEC);
+    final foregroundColor = selected
+        ? Colors.white
+        : enabled
+        ? const Color(0xFF40505B)
+        : const Color(0x667A8792);
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      selected: selected,
+      label: option.label,
+      child: SizedBox.expand(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled ? () => onChanged(option.value) : null,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: backgroundColor,
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected
+                    ? const Color(0x0047C7A2)
+                    : const Color(0x1215222B),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                option.label,
+                maxLines: 2,
+                softWrap: true,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.visible,
+                style: TextStyle(
+                  color: foregroundColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  height: 1.05,
+                ),
+              ),
             ),
           ),
-          child: FittedBox(fit: BoxFit.scaleDown, child: Text(option.label)),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -1487,178 +2003,137 @@ class _BreathingRhythmSettings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _BreathingRhythmBlock(
-          title: '默认呼吸',
+        _BreathingRhythmFormula(
+          title: '呼吸节奏- 默认',
           rhythm: settings.defaultBreathRhythm,
+          topBorder: false,
           onChanged: (rhythm) =>
               onChanged(settings.copyWith(defaultBreathRhythm: rhythm)),
         ),
-        _BreathingRhythmBlock(
-          title: '自定义练习',
+        _BreathingRhythmFormula(
+          title: '自定义呼吸练习',
           rhythm: settings.customBreathRhythm,
           includeCycles: true,
           onChanged: (rhythm) =>
               onChanged(settings.copyWith(customBreathRhythm: rhythm)),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
       ],
     );
   }
 }
 
-class _BreathingRhythmBlock extends StatelessWidget {
-  const _BreathingRhythmBlock({
+class _BreathingRhythmFormula extends StatelessWidget {
+  const _BreathingRhythmFormula({
     required this.title,
     required this.rhythm,
     required this.onChanged,
     this.includeCycles = false,
+    this.topBorder = true,
   });
 
   final String title;
   final BreathingRhythm rhythm;
   final bool includeCycles;
+  final bool topBorder;
   final ValueChanged<BreathingRhythm> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final fieldWidth = includeCycles ? 34.0 : 36.0;
+    final arrowWidth = includeCycles ? 13.0 : 15.0;
+    final unitWidth = includeCycles ? 30.0 : 18.0;
+    final tailUnitWidth = includeCycles ? 18.0 : 18.0;
+    final labelCells = [
+      _RhythmFormulaLabel('吸气', width: fieldWidth),
+      SizedBox(width: arrowWidth),
+      _RhythmFormulaLabel('屏息', width: fieldWidth),
+      SizedBox(width: arrowWidth),
+      _RhythmFormulaLabel('呼气', width: fieldWidth),
+      SizedBox(width: arrowWidth),
+      _RhythmFormulaLabel('屏息', width: fieldWidth),
+      if (includeCycles) ...[
+        SizedBox(width: unitWidth),
+        _RhythmFormulaLabel('组数', width: fieldWidth),
+        SizedBox(width: tailUnitWidth),
+      ] else
+        SizedBox(width: tailUnitWidth),
+    ];
+    final inputCells = [
+      _RhythmNumberInput(
+        value: rhythm.inhaleSeconds,
+        min: 1,
+        max: 60,
+        width: fieldWidth,
+        onChanged: (value) => onChanged(rhythm.copyWith(inhaleSeconds: value)),
+      ),
+      _RhythmArrow(width: arrowWidth),
+      _RhythmNumberInput(
+        value: rhythm.holdAfterInhaleSeconds,
+        min: 0,
+        max: 60,
+        width: fieldWidth,
+        onChanged: (value) =>
+            onChanged(rhythm.copyWith(holdAfterInhaleSeconds: value)),
+      ),
+      _RhythmArrow(width: arrowWidth),
+      _RhythmNumberInput(
+        value: rhythm.exhaleSeconds,
+        min: 1,
+        max: 60,
+        width: fieldWidth,
+        onChanged: (value) => onChanged(rhythm.copyWith(exhaleSeconds: value)),
+      ),
+      _RhythmArrow(width: arrowWidth),
+      _RhythmNumberInput(
+        value: rhythm.holdAfterExhaleSeconds,
+        min: 0,
+        max: 60,
+        width: fieldWidth,
+        onChanged: (value) =>
+            onChanged(rhythm.copyWith(holdAfterExhaleSeconds: value)),
+      ),
+      if (includeCycles) ...[
+        _RhythmUnit('秒 ×', width: unitWidth),
+        _RhythmNumberInput(
+          value: rhythm.cycles,
+          min: 1,
+          max: 99,
+          width: fieldWidth,
+          onChanged: (value) => onChanged(rhythm.copyWith(cycles: value)),
+        ),
+        _RhythmUnit('组', width: tailUnitWidth),
+      ] else
+        _RhythmUnit('秒', width: tailUnitWidth),
+    ];
+
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0x1215222B))),
+      decoration: BoxDecoration(
+        border: topBorder
+            ? const Border(top: BorderSide(color: Color(0x1215222B)))
+            : null,
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SettingsLabel(title),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _RhythmStepper(
-                  label: '吸气',
-                  unit: '秒',
-                  value: rhythm.inhaleSeconds,
-                  min: 1,
-                  max: 60,
-                  onChanged: (value) =>
-                      onChanged(rhythm.copyWith(inhaleSeconds: value)),
-                ),
-                _RhythmStepper(
-                  label: '屏息',
-                  unit: '秒',
-                  value: rhythm.holdAfterInhaleSeconds,
-                  min: 0,
-                  max: 60,
-                  onChanged: (value) =>
-                      onChanged(rhythm.copyWith(holdAfterInhaleSeconds: value)),
-                ),
-                _RhythmStepper(
-                  label: '呼气',
-                  unit: '秒',
-                  value: rhythm.exhaleSeconds,
-                  min: 1,
-                  max: 60,
-                  onChanged: (value) =>
-                      onChanged(rhythm.copyWith(exhaleSeconds: value)),
-                ),
-                _RhythmStepper(
-                  label: '再屏息',
-                  unit: '秒',
-                  value: rhythm.holdAfterExhaleSeconds,
-                  min: 0,
-                  max: 60,
-                  onChanged: (value) =>
-                      onChanged(rhythm.copyWith(holdAfterExhaleSeconds: value)),
-                ),
-                if (includeCycles)
-                  _RhythmStepper(
-                    label: '组数',
-                    unit: '组',
-                    value: rhythm.cycles,
-                    min: 1,
-                    max: 99,
-                    onChanged: (value) =>
-                        onChanged(rhythm.copyWith(cycles: value)),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RhythmStepper extends StatelessWidget {
-  const _RhythmStepper({
-    required this.label,
-    required this.unit,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
-  });
-
-  final String label;
-  final String unit;
-  final int value;
-  final int min;
-  final int max;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 124,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F6),
-          borderRadius: BorderRadius.circular(8),
-        ),
+      child: SizedBox(
+        width: double.infinity,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF6E7C86),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
+              _SettingsLabel(title),
+              const SizedBox(height: 8),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _SmallStepButton(
-                    icon: Icons.remove_rounded,
-                    onPressed: value > min
-                        ? () => onChanged((value - 1).clamp(min, max).toInt())
-                        : null,
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          '$value$unit',
-                          style: const TextStyle(
-                            color: Color(0xFF1D2C36),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  _SmallStepButton(
-                    icon: Icons.add_rounded,
-                    onPressed: value < max
-                        ? () => onChanged((value + 1).clamp(min, max).toInt())
-                        : null,
+                  Row(mainAxisSize: MainAxisSize.min, children: labelCells),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: inputCells,
                   ),
                 ],
               ),
@@ -1670,23 +2145,201 @@ class _RhythmStepper extends StatelessWidget {
   }
 }
 
-class _SmallStepButton extends StatelessWidget {
-  const _SmallStepButton({required this.icon, required this.onPressed});
+class _RhythmNumberInput extends StatefulWidget {
+  const _RhythmNumberInput({
+    required this.value,
+    required this.min,
+    required this.max,
+    this.width = 32,
+    required this.onChanged,
+  });
 
-  final IconData icon;
-  final VoidCallback? onPressed;
+  final int value;
+  final int min;
+  final int max;
+  final double width;
+  final ValueChanged<int> onChanged;
+
+  @override
+  State<_RhythmNumberInput> createState() => _RhythmNumberInputState();
+}
+
+class _RhythmNumberInputState extends State<_RhythmNumberInput> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: '${widget.value}');
+    _focusNode = FocusNode()..addListener(_handleFocusChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _RhythmNumberInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_focusNode.hasFocus && _controller.text != '${widget.value}') {
+      _controller.text = '${widget.value}';
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode
+      ..removeListener(_handleFocusChanged)
+      ..dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChanged() {
+    if (!_focusNode.hasFocus) _commit();
+    if (mounted) setState(() {});
+  }
+
+  void _commit() {
+    final parsed = int.tryParse(_controller.text.trim());
+    final next = (parsed ?? widget.value).clamp(widget.min, widget.max).toInt();
+    if (_controller.text != '$next') {
+      _controller.text = '$next';
+      _controller.selection = TextSelection.collapsed(
+        offset: _controller.text.length,
+      );
+    }
+    if (next != widget.value) widget.onChanged(next);
+  }
+
+  void _handleChanged(String value) {
+    final parsed = int.tryParse(value.trim());
+    if (parsed == null) return;
+    final next = parsed.clamp(widget.min, widget.max).toInt();
+    if (next != widget.value) widget.onChanged(next);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(icon),
-      iconSize: 15,
-      visualDensity: VisualDensity.compact,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 24, height: 24),
-      color: const Color(0xFF40505B),
-      disabledColor: const Color(0x667A8792),
+    return SizedBox(
+      width: widget.width,
+      height: 32,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F6),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: _focusNode.hasFocus
+                ? const Color(0xFF47C7A2)
+                : const Color(0x1A1F434E),
+          ),
+        ),
+        child: Center(
+          child: SizedBox(
+            height: 20,
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              textAlignVertical: TextAlignVertical.center,
+              textInputAction: TextInputAction.done,
+              onChanged: _handleChanged,
+              onSubmitted: (_) => _commit(),
+              style: const TextStyle(
+                color: Color(0xFF1D2C36),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                height: 1,
+              ),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isCollapsed: true,
+                counterText: '',
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RhythmFormulaLabel extends StatelessWidget {
+  const _RhythmFormulaLabel(this.text, {required this.width});
+
+  final String text;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        softWrap: false,
+        style: const TextStyle(
+          color: Color(0xFF7A8792),
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          height: 1.15,
+        ),
+      ),
+    );
+  }
+}
+
+class _RhythmArrow extends StatelessWidget {
+  const _RhythmArrow({required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: 32,
+      child: const Align(
+        alignment: Alignment.center,
+        child: Text(
+          '→',
+          style: TextStyle(
+            color: Color(0xFF9CA9B1),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            height: 1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RhythmUnit extends StatelessWidget {
+  const _RhythmUnit(this.text, {required this.width});
+
+  final String text;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: 32,
+      child: Align(
+        alignment: Alignment.center,
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          softWrap: false,
+          overflow: TextOverflow.visible,
+          style: const TextStyle(
+            color: Color(0xFF87939C),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            height: 1,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1708,7 +2361,7 @@ class _SegmentedAudioMode extends StatelessWidget {
             onPressed: () => onChanged('video'),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 6),
         Expanded(
           child: _AudioModeButton(
             label: '自定义混音',
@@ -1741,7 +2394,10 @@ class _AudioModeButton extends StatelessWidget {
         backgroundColor: active
             ? const Color(0xFF47C7A2)
             : const Color(0xFFE9EFF1),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: Text(label),
@@ -1932,17 +2588,17 @@ class _SettingsBottomBar extends StatelessWidget {
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          18,
-          12,
-          18,
-          MediaQuery.paddingOf(context).bottom + 12,
+          14,
+          8,
+          14,
+          MediaQuery.paddingOf(context).bottom + 8,
         ),
         child: FilledButton(
           onPressed: onSave,
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF47C7A2),
             foregroundColor: Colors.white,
-            minimumSize: const Size.fromHeight(48),
+            minimumSize: const Size.fromHeight(44),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -2047,23 +2703,52 @@ class _ClockTextState extends State<_ClockText> {
 }
 
 class _WeatherPill extends StatelessWidget {
-  const _WeatherPill();
+  const _WeatherPill({
+    required this.forecast,
+    required this.loading,
+    required this.error,
+    required this.onTap,
+  });
+
+  final WeatherForecast? forecast;
+  final bool loading;
+  final String? error;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Text(
-          '--° 天气加载中',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.84),
-            fontSize: 13,
+    final current = forecast?.current;
+    final label = forecast == null
+        ? error ?? (loading ? '天气加载中' : '天气加载中')
+        : '${_temperatureText(current?.temperature)} ${describeWeather(current?.weatherCode)} · ${forecast!.location}';
+    final canTap = forecast != null || (error != null && !loading);
+    return Semantics(
+      button: canTap,
+      label: '天气',
+      child: GestureDetector(
+        onTap: canTap ? onTap : null,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 174),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Text(
+                forecast == null ? '--° $label' : label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(
+                    alpha: forecast == null ? 0.66 : 0.84,
+                  ),
+                  fontSize: 13,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -2071,83 +2756,388 @@ class _WeatherPill extends StatelessWidget {
   }
 }
 
-class _VideoInfoPanel extends StatelessWidget {
-  const _VideoInfoPanel({required this.video, required this.onClose});
+class _WeatherInfoPanel extends StatelessWidget {
+  const _WeatherInfoPanel({required this.forecast, required this.onClose});
 
-  final VideoItem video;
+  final WeatherForecast forecast;
   final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
+    final current = forecast.current;
+    final firstDay = forecast.daily.isNotEmpty ? forecast.daily.first : null;
     return SafeArea(
       child: Align(
-        alignment: Alignment.topLeft,
+        alignment: Alignment.topRight,
         child: Container(
-          width: min(MediaQuery.sizeOf(context).width - 32, 420),
+          width: min(MediaQuery.sizeOf(context).width - 32, 390),
           margin: const EdgeInsets.fromLTRB(18, 58, 18, 0),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.72),
+            color: const Color(0xDD101820),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x66000000),
+                blurRadius: 26,
+                offset: Offset(0, 12),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      video.titleForDisplay(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          forecast.location,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${describeWeather(current.weatherCode)} · 体感 ${_plainNumber(current.feelsLike)}°',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.68),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   IconButton(
                     onPressed: onClose,
                     icon: const Icon(Icons.close_rounded),
-                    color: Colors.white,
+                    color: Colors.white.withValues(alpha: 0.82),
                     visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),
-              if (video.locationName.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  [
-                    video.locationName,
-                    if (video.locationCountry.isNotEmpty) video.locationCountry,
-                  ].join(' · '),
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 13,
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _temperatureText(current.temperature),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 52,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 9),
+                    child: Text(
+                      forecast.unit,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _WeatherMetric(
+                    value: '${_plainNumber(current.humidity)}%',
+                    label: '湿度',
+                  ),
+                  const SizedBox(width: 10),
+                  _WeatherMetric(
+                    value: _plainNumber(current.windSpeed),
+                    label: 'km/h 风',
+                  ),
+                  const SizedBox(width: 10),
+                  _WeatherMetric(
+                    value: _plainNumber(firstDay?.uvIndex),
+                    label: '紫外线',
+                  ),
+                ],
+              ),
+              if (forecast.daily.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 260),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: forecast.daily.length,
+                    separatorBuilder: (context, index) => Divider(
+                      height: 18,
+                      color: Colors.white.withValues(alpha: 0.10),
+                    ),
+                    itemBuilder: (context, index) {
+                      final day = forecast.daily[index];
+                      return _DailyWeatherRow(day: day, index: index);
+                    },
                   ),
                 ),
               ],
-              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WeatherMetric extends StatelessWidget {
+  const _WeatherMetric({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Column(
+            children: [
               Text(
-                video.description,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.84),
-                  fontSize: 14,
-                  height: 1.6,
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               Text(
-                '${video.sourceName} · ${video.license}',
-                maxLines: 2,
+                label,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.52),
-                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.58),
+                  fontSize: 11,
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DailyWeatherRow extends StatelessWidget {
+  const _DailyWeatherRow({required this.day, required this.index});
+
+  final WeatherDaily day;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            SizedBox(
+              width: 78,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _dailyLabel(day.date, index),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _dateShort(day.date),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.54),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Text(
+                describeWeather(day.weatherCode),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            Text(
+              '${_plainNumber(day.min)}° / ${_plainNumber(day.max)}°',
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '降水 ${_plainNumber(day.precipitation)}% · ${_plainNumber(day.precipitationSum)}mm · 风 ${_plainNumber(day.windSpeed)} km/h',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.54),
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          '紫外线 ${_plainNumber(day.uvIndex)} · 日出 ${_timeOnly(day.sunrise)} · 日落 ${_timeOnly(day.sunset)}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.54),
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _VideoInfoOverlay extends StatelessWidget {
+  const _VideoInfoOverlay({
+    required this.video,
+    required this.isFavorite,
+    required this.onToggleFavorite,
+    required this.onClose,
+  });
+
+  final VideoItem video;
+  final bool isFavorite;
+  final VoidCallback onToggleFavorite;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onClose,
+      child: SafeArea(
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Container(
+            width: min(MediaQuery.sizeOf(context).width - 32, 420),
+            margin: const EdgeInsets.fromLTRB(18, 58, 18, 0),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        video.titleForDisplay(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onClose,
+                      icon: const Icon(Icons.close_rounded),
+                      color: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+                if (video.locationName.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    [
+                      video.locationName,
+                      if (video.locationCountry.isNotEmpty)
+                        video.locationCountry,
+                    ].join(' · '),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Text(
+                  video.description.isEmpty ? '暂无介绍' : video.description,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.84),
+                    fontSize: 14,
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: onToggleFavorite,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isFavorite ? '♥' : '♡',
+                          style: TextStyle(
+                            color: isFavorite
+                                ? const Color(0xFFFF405F)
+                                : Colors.white.withValues(alpha: 0.8),
+                            fontSize: 26,
+                            height: 1,
+                            shadows: isFavorite
+                                ? const [
+                                    Shadow(
+                                      color: Color(0x5CFF405F),
+                                      blurRadius: 10,
+                                    ),
+                                  ]
+                                : const [],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isFavorite ? '取消收藏' : '收藏视频',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.82),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -2184,4 +3174,38 @@ class _LoadError extends StatelessWidget {
       ),
     );
   }
+}
+
+String _temperatureText(int? value) => '${_plainNumber(value)}°';
+
+String _plainNumber(int? value) => value == null ? '--' : '$value';
+
+String _dailyLabel(String date, int index) {
+  if (index == 0) return '今天';
+  if (index == 1) return '明天';
+  final parsed = DateTime.tryParse(date);
+  if (parsed == null) return '第 ${index + 1} 天';
+  const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  return weekdays[parsed.weekday - 1];
+}
+
+String _dateShort(String date) {
+  final parsed = DateTime.tryParse(date);
+  if (parsed == null) {
+    return date.length >= 5 ? date.substring(date.length - 5) : date;
+  }
+  return '${parsed.month}/${parsed.day}';
+}
+
+String _timeOnly(String? value) {
+  if (value == null || value.isEmpty) return '--';
+  final parsed = DateTime.tryParse(value);
+  if (parsed != null) {
+    return '${parsed.hour.toString().padLeft(2, '0')}:${parsed.minute.toString().padLeft(2, '0')}';
+  }
+  final marker = value.indexOf('T');
+  if (marker >= 0 && marker + 6 <= value.length) {
+    return value.substring(marker + 1, marker + 6);
+  }
+  return value;
 }

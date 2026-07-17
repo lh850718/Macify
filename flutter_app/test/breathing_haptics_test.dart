@@ -52,6 +52,16 @@ void main() {
     expect(bridge.stopHapticsCount, 1);
   });
 
+  test('plays custom exercise completion haptic through the bridge', () async {
+    final bridge = _FakeBackgroundAudioBridge();
+    final controller = BreathingHapticController(bridge: bridge);
+
+    final played = await controller.playCompletion();
+
+    expect(played, isTrue);
+    expect(bridge.completionHapticCount, 1);
+  });
+
   test('missing platform plugin is reported as unavailable', () async {
     final controller = BreathingHapticController(
       bridge: _MissingPluginBackgroundAudioBridge(),
@@ -59,12 +69,14 @@ void main() {
 
     await expectLater(controller.startDefault(), completion(isFalse));
     await expectLater(controller.stop(), completion(isFalse));
+    await expectLater(controller.playCompletion(), completion(isFalse));
   });
 }
 
 class _FakeBackgroundAudioBridge extends BackgroundAudioServiceBridge {
   final startedPatterns = <BackgroundHapticPattern>[];
   var stopHapticsCount = 0;
+  var completionHapticCount = 0;
 
   @override
   Future<bool> startHapticPattern({
@@ -79,6 +91,12 @@ class _FakeBackgroundAudioBridge extends BackgroundAudioServiceBridge {
     stopHapticsCount += 1;
     return true;
   }
+
+  @override
+  Future<bool> playCompletionHaptic() async {
+    completionHapticCount += 1;
+    return true;
+  }
 }
 
 class _MissingPluginBackgroundAudioBridge extends BackgroundAudioServiceBridge {
@@ -89,6 +107,11 @@ class _MissingPluginBackgroundAudioBridge extends BackgroundAudioServiceBridge {
 
   @override
   Future<bool> stopHaptics() {
+    throw MissingPluginException();
+  }
+
+  @override
+  Future<bool> playCompletionHaptic() {
     throw MissingPluginException();
   }
 }

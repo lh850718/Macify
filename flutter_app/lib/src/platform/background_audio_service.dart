@@ -43,6 +43,11 @@ class BackgroundAudioServiceBridge {
     return stopped ?? false;
   }
 
+  Future<bool> playCompletionHaptic() async {
+    final played = await _channel.invokeMethod<bool>('playCompletionHaptic');
+    return played ?? false;
+  }
+
   Future<BackgroundAudioServiceStatus> status() async {
     final raw = await _channel.invokeMapMethod<String, Object?>('status');
     return BackgroundAudioServiceStatus.fromJson(raw ?? const {});
